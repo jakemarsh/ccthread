@@ -269,7 +269,9 @@ try {
   const msg = err instanceof Error ? err.message : String(err);
   if (/Missing required (?:positional )?argument/i.test(msg)
       || /Unknown (?:command|argument|option)/i.test(msg)
-      || /Invalid regular expression/i.test(msg)) {
+      || /Invalid regular expression/i.test(msg)
+      || /invalid --/i.test(msg)
+      || /^(list|show|search|stats|find|info|tools): invalid /i.test(msg)) {
     process.stderr.write(`ccthread: ${msg}\n`);
     process.exit(2);
   }

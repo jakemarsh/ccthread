@@ -175,6 +175,19 @@ describe("regressions", () => {
     const out = await runShow(path, {});
     expect(out).not.toContain("(ai-title)");
   });
+
+  // Bug: enum-like flags silently accepted invalid values.
+  test("list --sort rejects unknown value", async () => {
+    let err: any;
+    try { await runList({ sort: "wrong" as any, limit: 5 }); } catch (e) { err = e; }
+    expect(err?.message ?? "").toMatch(/invalid --sort/);
+  });
+
+  test("show --tool-details rejects unknown value", async () => {
+    let err: any;
+    try { await runShow(join(FX, "minimal.jsonl"), { toolDetails: "lots" as any }); } catch (e) { err = e; }
+    expect(err?.message ?? "").toMatch(/invalid --tool-details/);
+  });
 });
 
 // CLI-surface regressions — spawn `bun run src/cli.ts` and check exit codes

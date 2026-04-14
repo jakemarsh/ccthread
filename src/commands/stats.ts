@@ -48,6 +48,11 @@ export async function runStats(opts: StatsOptions = {}): Promise<string> {
   const until = opts.until ? new Date(opts.until).getTime() : Infinity;
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
+  if (opts.groupBy) {
+    const VALID_GB = new Set(["project", "day", "model"]);
+    if (!VALID_GB.has(opts.groupBy)) throw new Error(`stats: invalid --group-by "${opts.groupBy}" (expected: project, day, model)`);
+  }
+
   const groups = new Map<string, Agg>();
   const overall = newAgg();
 

@@ -35,7 +35,14 @@ interface Match {
 export async function runSearch(query: string, opts: SearchOptions = {}): Promise<string> {
   if (!query) throw new Error("search: missing query");
 
+  if (opts.role && opts.role !== "any") {
+    const VALID_ROLES = new Set(["user", "assistant", "tool_use", "tool_result", "thinking"]);
+    if (!VALID_ROLES.has(opts.role)) throw new Error(`search: invalid --role "${opts.role}" (expected: user, assistant, tool_use, tool_result, thinking, any)`);
+  }
+
   const fields = (opts.fields ?? "text,tool_use,tool_result").split(",").map(s => s.trim()).filter(Boolean);
+  const VALID_FIELDS = new Set(["text", "tool_use", "tool_result", "thinking"]);
+  for (const f of fields) if (!VALID_FIELDS.has(f)) throw new Error(`search: invalid --fields value "${f}" (expected one of: text, tool_use, tool_result, thinking)`);
   const window = opts.window ?? 2;
   const limit = opts.limit ?? 20;
   const maxPer = opts.maxMatchesPerSession ?? 5;
@@ -59,6 +66,8 @@ export async function runSearch(query: string, opts: SearchOptions = {}): Promis
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
   const sort = opts.sort ?? "recent";
+  const VALID_SORTS = new Set(["recent", "oldest", "hits"]);
+  if (!VALID_SORTS.has(sort)) throw new Error(`search: invalid --sort value "${sort}" (expected: recent, oldest, hits)`);
   if (sort === "recent") sessions.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   else if (sort === "oldest") sessions.sort((a, b) => a.mtime.getTime() - b.mtime.getTime());
 

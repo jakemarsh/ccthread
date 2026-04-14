@@ -21,11 +21,15 @@ export interface ShowOptions extends RenderOptions {
 export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise<string> {
   const ref = await resolveSession(idOrPath);
 
+  const td = opts.toolDetails ?? "summary";
+  const VALID_TD = new Set(["full", "summary", "none"]);
+  if (!VALID_TD.has(td)) throw new Error(`show: invalid --tool-details "${td}" (expected: full, summary, none)`);
+
   const renderOpts: RenderOptions = {
     ...opts,
     thinking: opts.noThinking ? false : (opts.thinking ?? true),
     sidechains: opts.includeSidechains ?? false,
-    toolDetails: opts.toolDetails ?? "summary",
+    toolDetails: td as "full" | "summary" | "none",
     sessionPath: ref.path,
   };
 

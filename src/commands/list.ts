@@ -43,6 +43,8 @@ export async function runList(opts: ListOptions = {}): Promise<string> {
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
   const sort = opts.sort ?? "recent";
+  const VALID_SORTS = new Set(["recent", "oldest", "size"]);
+  if (!VALID_SORTS.has(sort)) throw new Error(`list: invalid --sort value "${sort}" (expected: recent, oldest, size)`);
   if (sort === "recent") sessions.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   else if (sort === "oldest") sessions.sort((a, b) => a.mtime.getTime() - b.mtime.getTime());
   else if (sort === "size") sessions.sort((a, b) => b.size - a.size);
