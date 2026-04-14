@@ -35,8 +35,12 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
 
   const perPage = opts.perPage ?? 50;
   const page = opts.page ?? 1;
+  if (perPage <= 0) throw new Error(`show: --per-page must be >= 1 (got ${perPage})`);
+  if (page < 1) throw new Error(`show: --page must be >= 1 (got ${page})`);
   const fromIdx = opts.from != null ? opts.from : (page - 1) * perPage;
   const toIdx = opts.to != null ? opts.to : fromIdx + perPage;
+  if (fromIdx < 0) throw new Error(`show: --from must be >= 0 (got ${fromIdx})`);
+  if (toIdx < fromIdx) throw new Error(`show: --to (${toIdx}) must be >= --from (${fromIdx})`);
 
   // Two modes: if --count-total, stream once to collect total message count,
   // then again to render the requested slice. Otherwise, render on the fly

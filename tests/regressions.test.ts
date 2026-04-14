@@ -196,6 +196,21 @@ describe("regressions", () => {
     try { await runList({ since: "not-a-date" }); } catch (e) { err = e; }
     expect(err?.message ?? "").toMatch(/is not a valid date/);
   });
+
+  // Bug: show --from 20 --to 10 (inverted range) produced a misleading
+  // "Page 1 is past the end (10 messages)" where 10 is actually where we
+  // stopped streaming, not the session's real length. Validate the range.
+  test("show rejects inverted --from/--to range", async () => {
+    let err: any;
+    try { await runShow(join(FX, "minimal.jsonl"), { from: 20, to: 10 }); } catch (e) { err = e; }
+    expect(err?.message ?? "").toMatch(/must be >=/);
+  });
+
+  test("show rejects --page < 1", async () => {
+    let err: any;
+    try { await runShow(join(FX, "minimal.jsonl"), { page: 0 }); } catch (e) { err = e; }
+    expect(err?.message ?? "").toMatch(/must be >=/);
+  });
 });
 
 // CLI-surface regressions — spawn `bun run src/cli.ts` and check exit codes
