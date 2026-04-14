@@ -21,10 +21,10 @@ function num(v: unknown): number | undefined {
 }
 
 const projects = defineCommand({
-  meta: { name: "projects", description: "List projects in ~/.claude/projects/" },
+  meta: { name: "projects", description: "List every project under ~/.claude/projects with session counts + last-active time." },
   args: {
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    json: { type: "boolean", default: false, description: "Emit a JSON array instead of markdown." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting (useful for grep)." },
   },
   async run({ args }) {
     process.stdout.write(await runProjects({ json: args.json, plain: args.plain }));
@@ -32,15 +32,15 @@ const projects = defineCommand({
 });
 
 const list = defineCommand({
-  meta: { name: "list", description: "List conversations" },
+  meta: { name: "list", description: "List conversations (sessions) with metadata: id, start, duration, #messages, model, title." },
   args: {
-    project: { type: "string" },
-    since: { type: "string" },
-    until: { type: "string" },
-    limit: { type: "string" },
-    sort: { type: "string", description: "recent|oldest|size" },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    project: { type: "string", description: "Filter to one project — accepts basename, decoded path, or on-disk encoded name." },
+    since: { type: "string", description: "Only sessions last-modified on or after this ISO date/time (e.g. 2026-04-01)." },
+    until: { type: "string", description: "Only sessions last-modified on or before this ISO date/time." },
+    limit: { type: "string", description: "Max sessions to return (default 50)." },
+    sort: { type: "string", description: "Sort order: recent (default), oldest, or size." },
+    json: { type: "boolean", default: false, description: "Emit JSON array." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runList({
@@ -56,21 +56,21 @@ const list = defineCommand({
 });
 
 const show = defineCommand({
-  meta: { name: "show", description: "Print a conversation as markdown" },
+  meta: { name: "show", description: "Print one conversation as clean, paginated markdown." },
   args: {
-    id: { type: "positional", required: true, description: "session id, prefix, path, or 'last'" },
-    page: { type: "string" },
-    "per-page": { type: "string" },
-    from: { type: "string" },
-    to: { type: "string" },
-    "no-thinking": { type: "boolean", default: false },
-    "include-sidechains": { type: "boolean", default: false },
-    "tool-details": { type: "string", description: "full|summary|none" },
-    "count-total": { type: "boolean", default: false },
-    verbose: { type: "boolean", default: false },
-    utc: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
-    json: { type: "boolean", default: false },
+    id: { type: "positional", required: true, description: "Session id (8+ hex prefix or full UUID), .jsonl path, or the literal 'last'." },
+    page: { type: "string", description: "1-indexed page to render (default 1)." },
+    "per-page": { type: "string", description: "Messages per page (default 50)." },
+    from: { type: "string", description: "Render messages starting at this 0-indexed position (alternative to --page)." },
+    to: { type: "string", description: "Render messages up to but not including this 0-indexed position." },
+    "no-thinking": { type: "boolean", default: false, description: "Hide thinking blocks (shown by default)." },
+    "include-sidechains": { type: "boolean", default: false, description: "Inline subagent sidechain messages (hidden by default)." },
+    "tool-details": { type: "string", description: "Tool-result display: full (no truncation), summary (default, 40 lines max), or none (one-line status)." },
+    "count-total": { type: "boolean", default: false, description: "Pre-scan to compute total message count (enables accurate 'Page N of M'). Costs one extra read of the file." },
+    verbose: { type: "boolean", default: false, description: "Also show hook/progress/attachment noise usually filtered." },
+    utc: { type: "boolean", default: false, description: "Format timestamps in UTC instead of local time." },
+    plain: { type: "boolean", default: false, description: "Strip emoji + code-fence language hints." },
+    json: { type: "boolean", default: false, description: "Emit a structured JSON object (session metadata + rendered body)." },
   },
   async run({ args }) {
     process.stdout.write(await runShow(args.id, {
@@ -91,14 +91,14 @@ const show = defineCommand({
 });
 
 const find = defineCommand({
-  meta: { name: "find", description: "Find conversations by keyword (one line per session)" },
+  meta: { name: "find", description: "Find conversations that mention a keyword — one line per match. Lighter than `search`; great for 'which old thread was X in?'" },
   args: {
-    query: { type: "positional", required: true },
-    project: { type: "string" },
-    limit: { type: "string" },
-    "snippet-len": { type: "string" },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    query: { type: "positional", required: true, description: "Substring to look for (case-insensitive). Quote it to protect shell chars." },
+    project: { type: "string", description: "Only search within one project." },
+    limit: { type: "string", description: "Max matching sessions to return (default 20)." },
+    "snippet-len": { type: "string", description: "Characters of surrounding context in the one-line snippet (default 60)." },
+    json: { type: "boolean", default: false, description: "Emit JSON array of hits." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runFind(args.query, {
@@ -112,24 +112,24 @@ const find = defineCommand({
 });
 
 const search = defineCommand({
-  meta: { name: "search", description: "Keyword search with context windows" },
+  meta: { name: "search", description: "Keyword search across sessions with ±N messages of context around each hit. Use `find` if you only want session-level hits." },
   args: {
-    query: { type: "positional", required: true },
-    project: { type: "string" },
-    session: { type: "string" },
-    since: { type: "string" },
-    until: { type: "string" },
-    window: { type: "string" },
-    limit: { type: "string" },
-    "max-matches-per-session": { type: "string" },
-    regex: { type: "boolean", default: false },
-    "case-sensitive": { type: "boolean", default: false },
-    role: { type: "string" },
-    fields: { type: "string" },
-    sort: { type: "string" },
-    "include-sidechains": { type: "boolean", default: false },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    query: { type: "positional", required: true, description: "Substring to search for (or regex when --regex)." },
+    project: { type: "string", description: "Only search within one project." },
+    session: { type: "string", description: "Only search within one session (id or path)." },
+    since: { type: "string", description: "Only sessions modified on or after this ISO date/time." },
+    until: { type: "string", description: "Only sessions modified on or before this ISO date/time." },
+    window: { type: "string", description: "Messages before AND after each hit to include (default 2)." },
+    limit: { type: "string", description: "Max sessions to return (default 20)." },
+    "max-matches-per-session": { type: "string", description: "Cap hits emitted per session (default 5)." },
+    regex: { type: "boolean", default: false, description: "Treat query as an ECMAScript regular expression." },
+    "case-sensitive": { type: "boolean", default: false, description: "Case-sensitive match (default: insensitive)." },
+    role: { type: "string", description: "Restrict to one role: user, assistant, tool_use, tool_result, thinking, or any (default any)." },
+    fields: { type: "string", description: "Comma-separated fields to search within message content (default: text,tool_use,tool_result). Add 'thinking' to include reasoning blocks." },
+    sort: { type: "string", description: "Session ordering: recent (default), oldest, or hits." },
+    "include-sidechains": { type: "boolean", default: false, description: "Include subagent sidechain messages in the search scope." },
+    json: { type: "boolean", default: false, description: "Emit JSON with match metadata + windows." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runSearch(args.query, {
@@ -153,11 +153,11 @@ const search = defineCommand({
 });
 
 const info = defineCommand({
-  meta: { name: "info", description: "Metadata for a conversation" },
+  meta: { name: "info", description: "Show metadata for one conversation: project, cwd, git branch, models, duration, message counts by type, token totals, tool calls, sidechain/interrupted/api-error/compact-boundary counts." },
   args: {
-    id: { type: "positional", required: true },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    id: { type: "positional", required: true, description: "Session id (8+ hex prefix or full UUID), .jsonl path, or 'last'." },
+    json: { type: "boolean", default: false, description: "Emit structured JSON." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runInfo(args.id, { json: args.json, plain: args.plain }));
@@ -165,12 +165,12 @@ const info = defineCommand({
 });
 
 const tools = defineCommand({
-  meta: { name: "tools", description: "Tool usage breakdown for one conversation" },
+  meta: { name: "tools", description: "Tool-usage breakdown for one conversation (Bash, Read, Edit, etc.) with call counts + percentages." },
   args: {
-    id: { type: "positional", required: true },
-    top: { type: "string" },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    id: { type: "positional", required: true, description: "Session id, path, or 'last'." },
+    top: { type: "string", description: "Show only the top N tools by calls (default 20)." },
+    json: { type: "boolean", default: false, description: "Emit structured JSON." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runTools(args.id, { top: num(args.top), json: args.json, plain: args.plain }));
@@ -178,14 +178,14 @@ const tools = defineCommand({
 });
 
 const stats = defineCommand({
-  meta: { name: "stats", description: "Aggregate stats across conversations" },
+  meta: { name: "stats", description: "Aggregate totals across many sessions: counts, durations, token usage (incl. cache), top tools, models, error/interrupt/compact counts." },
   args: {
-    project: { type: "string" },
-    since: { type: "string" },
-    until: { type: "string" },
-    "group-by": { type: "string", description: "project|day|model" },
-    json: { type: "boolean", default: false },
-    plain: { type: "boolean", default: false },
+    project: { type: "string", description: "Only count sessions in one project." },
+    since: { type: "string", description: "Only sessions modified on or after this ISO date/time." },
+    until: { type: "string", description: "Only sessions modified on or before this ISO date/time." },
+    "group-by": { type: "string", description: "Break totals down by: project, day, or model." },
+    json: { type: "boolean", default: false, description: "Emit structured JSON (includes per-group breakdowns)." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
   async run({ args }) {
     process.stdout.write(await runStats({
@@ -203,11 +203,11 @@ const main = defineCommand({
   meta: {
     name: "ccthread",
     version: VERSION,
-    description: "Read, search, and summarize Claude Code conversation logs.",
+    description: "Read, search, and summarize Claude Code conversation logs from ~/.claude/projects/.\n\nExamples:\n  ccthread projects                         # list projects\n  ccthread list --project great-work        # list recent sessions\n  ccthread find \"rate limit\"                # which old thread mentioned it?\n  ccthread show <id> --page 2               # paginate through a long session\n  ccthread search \"port 3000\" --window 2    # grep with context\n  ccthread info <id>                        # session metadata + token usage\n  ccthread tools <id>                       # tool-call breakdown\n  ccthread stats --since 2026-04-01         # aggregate totals",
   },
   args: {
-    strict: { type: "boolean", default: false, description: "Fail fast on malformed JSON lines" },
-    silent: { type: "boolean", default: false, description: "Suppress stderr warnings" },
+    strict: { type: "boolean", default: false, description: "Fail fast on malformed JSON lines (default: warn + continue)." },
+    silent: { type: "boolean", default: false, description: "Suppress stderr warnings about malformed lines." },
   },
   setup({ args }) {
     if (args.strict) process.env.CCTHREAD_STRICT = "1";
