@@ -2,6 +2,7 @@ import { listAllSessions, encodeProjectPath } from "../paths.ts";
 import { streamJsonl } from "../parser/stream.ts";
 import { isAssistant, isSystem, isUser, type AssistantLine, type LogLine } from "../parser/types.ts";
 import { accumulateTokens, humanDuration, renderTokens } from "../format/markdown.ts";
+import { parseDateArg } from "../util/dates.ts";
 
 export interface StatsOptions {
   project?: string;
@@ -44,8 +45,8 @@ export async function runStats(opts: StatsOptions = {}): Promise<string> {
       || s.project.name === encodeProjectPath(p)
     );
   }
-  const since = opts.since ? new Date(opts.since).getTime() : -Infinity;
-  const until = opts.until ? new Date(opts.until).getTime() : Infinity;
+  const since = parseDateArg("stats --since", opts.since, -Infinity);
+  const until = parseDateArg("stats --until", opts.until, Infinity);
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
   if (opts.groupBy) {

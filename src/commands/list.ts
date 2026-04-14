@@ -1,6 +1,7 @@
 import { listAllSessions, encodeProjectPath } from "../paths.ts";
 import { streamJsonl } from "../parser/stream.ts";
 import { contentBlocks, isUser, isAssistant, type LogLine, type AssistantLine } from "../parser/types.ts";
+import { parseDateArg } from "../util/dates.ts";
 
 export interface ListOptions {
   project?: string;
@@ -38,8 +39,8 @@ export async function runList(opts: ListOptions = {}): Promise<string> {
     );
   }
 
-  const since = opts.since ? new Date(opts.since).getTime() : -Infinity;
-  const until = opts.until ? new Date(opts.until).getTime() : Infinity;
+  const since = parseDateArg("list --since", opts.since, -Infinity);
+  const until = parseDateArg("list --until", opts.until, Infinity);
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
   const sort = opts.sort ?? "recent";

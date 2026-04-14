@@ -2,6 +2,7 @@ import { listAllSessions, encodeProjectPath, resolveSession } from "../paths.ts"
 import { streamJsonl } from "../parser/stream.ts";
 import { renderLine, fmtTime } from "../format/markdown.ts";
 import { contentBlocks, isAssistant, isUser, type LogLine } from "../parser/types.ts";
+import { parseDateArg } from "../util/dates.ts";
 
 export interface SearchOptions {
   project?: string;
@@ -61,8 +62,8 @@ export async function runSearch(query: string, opts: SearchOptions = {}): Promis
     );
   }
 
-  const since = opts.since ? new Date(opts.since).getTime() : -Infinity;
-  const until = opts.until ? new Date(opts.until).getTime() : Infinity;
+  const since = parseDateArg("search --since", opts.since, -Infinity);
+  const until = parseDateArg("search --until", opts.until, Infinity);
   sessions = sessions.filter(s => s.mtime.getTime() >= since && s.mtime.getTime() <= until);
 
   const sort = opts.sort ?? "recent";

@@ -188,6 +188,14 @@ describe("regressions", () => {
     try { await runShow(join(FX, "minimal.jsonl"), { toolDetails: "lots" as any }); } catch (e) { err = e; }
     expect(err?.message ?? "").toMatch(/invalid --tool-details/);
   });
+
+  // Bug: --since and --until silently accepted unparseable strings (NaN
+  // comparison meant nothing ever matched, exit 0 with "(no sessions match)").
+  test("list --since rejects unparseable date", async () => {
+    let err: any;
+    try { await runList({ since: "not-a-date" }); } catch (e) { err = e; }
+    expect(err?.message ?? "").toMatch(/is not a valid date/);
+  });
 });
 
 // CLI-surface regressions — spawn `bun run src/cli.ts` and check exit codes

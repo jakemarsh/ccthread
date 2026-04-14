@@ -271,7 +271,8 @@ try {
       || /Unknown (?:command|argument|option)/i.test(msg)
       || /Invalid regular expression/i.test(msg)
       || /invalid --/i.test(msg)
-      || /^(list|show|search|stats|find|info|tools): invalid /i.test(msg)) {
+      || /^(list|show|search|stats|find|info|tools)(?: --\w+)?(?: ")? (?:invalid|.*is not a valid date)/i.test(msg)
+      || /is not a valid date/i.test(msg)) {
     process.stderr.write(`ccthread: ${msg}\n`);
     process.exit(2);
   }
