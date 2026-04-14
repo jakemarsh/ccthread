@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-latest
+            targets: "bun-darwin-arm64 bun-darwin-x64-baseline"
+          - runner: ubuntu-latest
+            targets: "bun-linux-x64-baseline bun-linux-arm64"
+          - runner: windows-latest
+            targets: "bun-windows-x64-baseline bun-windows-arm64"
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - name: Build targets
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          for target in ${{ matrix.targets }}; do
+            outdir="dist/ccthread-${VERSION}-${target}"
+            mkdir -p "$outdir"
+            exe="ccthread"
+            case "$target" in bun-windows-*) exe="ccthread.exe" ;; esac
+            bun build src/cli.ts --compile --minify --target="$target" \
+              --define CCTHREAD_VERSION="\"${VERSION}\"" \
+              --outfile "$outdir/$exe"
+            (cd dist && tar -czf "ccthread-v${VERSION}-${target}.tar.gz" "ccthread-${VERSION}-${target}")
+            (cd dist && shasum -a 256 "ccthread-v${VERSION}-${target}.tar.gz" > "ccthread-v${VERSION}-${target}.tar.gz.sha256" || sha256sum "ccthread-v${VERSION}-${target}.tar.gz" > "ccthread-v${VERSION}-${target}.tar.gz.sha256")
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ccthread-${{ matrix.runner }}
+          path: dist/ccthread-v*.tar.gz*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect
+        run: |
+          mkdir -p release
+          find artifacts -type f -name "ccthread-v*" -exec cp {} release/ \;
+          ls -la release
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          generate_release_notes: true

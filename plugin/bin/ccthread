@@ -1,0 +1,42 @@
+#!/bin/sh
+# ccthread dispatcher — downloads the right binary on first run, then execs.
+# Pinned version in .ccthread-version (kept in lockstep with plugin.json).
+set -e
+
+ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+DATA="${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/ccthread}"
+VERSION=$(cat "$ROOT/bin/.ccthread-version" | tr -d '[:space:]')
+
+# Detect target triple.
+OS=$(uname -s)
+ARCH=$(uname -m)
+case "$OS-$ARCH" in
+  Darwin-arm64)  TARGET="bun-darwin-arm64";           EXE="ccthread" ;;
+  Darwin-x86_64) TARGET="bun-darwin-x64-baseline";    EXE="ccthread" ;;
+  Linux-x86_64)  TARGET="bun-linux-x64-baseline";     EXE="ccthread" ;;
+  Linux-aarch64|Linux-arm64) TARGET="bun-linux-arm64"; EXE="ccthread" ;;
+  *)
+    echo "ccthread: unsupported platform $OS/$ARCH" >&2
+    echo "Install manually: https://github.com/jakemarsh/ccthread/releases" >&2
+    exit 1
+  ;;
+esac
+
+BIN="$DATA/bin/ccthread-$VERSION-$TARGET/$EXE"
+
+if [ ! -x "$BIN" ]; then
+  mkdir -p "$(dirname "$BIN")"
+  URL="https://github.com/jakemarsh/ccthread/releases/download/v$VERSION/ccthread-v$VERSION-$TARGET.tar.gz"
+  TMP=$(mktemp -d)
+  trap 'rm -rf "$TMP"' EXIT
+  if ! curl -fSL "$URL" -o "$TMP/ccthread.tar.gz" 2>/dev/null; then
+    echo "ccthread: could not download $URL" >&2
+    echo "Install manually: https://github.com/jakemarsh/ccthread/releases" >&2
+    exit 1
+  fi
+  tar -xzf "$TMP/ccthread.tar.gz" -C "$TMP"
+  mv "$TMP"/*/"$EXE" "$BIN"
+  chmod +x "$BIN"
+fi
+
+exec "$BIN" "$@"

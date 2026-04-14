@@ -1,0 +1,51 @@
+#!/bin/sh
+# ccthread installer — downloads the right binary from GitHub Releases.
+set -e
+
+REPO="jakemarsh/ccthread"
+VERSION="${CCTHREAD_VERSION:-latest}"
+
+OS=$(uname -s)
+ARCH=$(uname -m)
+case "$OS-$ARCH" in
+  Darwin-arm64)            TARGET="bun-darwin-arm64" ;;
+  Darwin-x86_64)           TARGET="bun-darwin-x64-baseline" ;;
+  Linux-x86_64)            TARGET="bun-linux-x64-baseline" ;;
+  Linux-aarch64|Linux-arm64) TARGET="bun-linux-arm64" ;;
+  *) echo "ccthread: unsupported platform $OS/$ARCH" >&2; exit 1 ;;
+esac
+
+if [ "$VERSION" = "latest" ]; then
+  VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p' | head -n1)
+  if [ -z "$VERSION" ]; then
+    echo "ccthread: could not resolve latest version" >&2
+    exit 1
+  fi
+fi
+
+URL="https://github.com/$REPO/releases/download/v$VERSION/ccthread-v$VERSION-$TARGET.tar.gz"
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+echo "Downloading ccthread v$VERSION ($TARGET)…"
+curl -fSL "$URL" -o "$TMP/ccthread.tar.gz"
+tar -xzf "$TMP/ccthread.tar.gz" -C "$TMP"
+
+# Pick install destination.
+if [ -w "/usr/local/bin" ] || ([ ! -e "/usr/local/bin" ] && mkdir -p /usr/local/bin 2>/dev/null); then
+  DEST="/usr/local/bin"
+elif [ -w "$HOME/.local/bin" ] || mkdir -p "$HOME/.local/bin" 2>/dev/null; then
+  DEST="$HOME/.local/bin"
+else
+  echo "ccthread: could not find a writable install dir" >&2
+  exit 1
+fi
+
+mv "$TMP"/*/ccthread "$DEST/ccthread"
+chmod +x "$DEST/ccthread"
+
+echo "Installed to $DEST/ccthread"
+case ":$PATH:" in
+  *":$DEST:"*) ;;
+  *) echo "Note: $DEST is not on your PATH. Add it to your shell profile." ;;
+esac

@@ -1,0 +1,10 @@
+{
+  "name": "ccthread",
+  "version": "0.1.0",
+  "description": "Read, search, and summarize Claude Code conversation logs from ~/.claude/projects.",
+  "author": { "name": "Jake Marsh" },
+  "homepage": "https://github.com/jakemarsh/ccthread",
+  "repository": "https://github.com/jakemarsh/ccthread",
+  "license": "MIT",
+  "keywords": ["claude-code", "logs", "history", "search", "cli"]
+}

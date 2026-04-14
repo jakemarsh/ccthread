@@ -1,0 +1,8 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"s4","timestamp":"2026-04-14T10:00:00.000Z","message":{"role":"user","content":"go"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"s4","timestamp":"2026-04-14T10:00:01.000Z","message":{"id":"m1","role":"assistant","model":"claude-opus-4-6","content":[{"type":"text","text":"ok"}],"usage":{"input_tokens":1,"output_tokens":1}}}
+{"type":"system","subtype":"api_error","level":"error","uuid":"s1","parentUuid":"a1","sessionId":"s4","timestamp":"2026-04-14T10:00:02.000Z","error":{"status":529,"error":{"error":{"message":"Overloaded"}}}}
+{"type":"system","subtype":"compact_boundary","level":"info","uuid":"s2","parentUuid":"a1","sessionId":"s4","timestamp":"2026-04-14T10:00:03.000Z"}
+{"type":"system","subtype":"turn_duration","durationMs":1500,"messageCount":2,"uuid":"s3","parentUuid":"a1","sessionId":"s4","timestamp":"2026-04-14T10:00:04.000Z"}
+{"type":"progress","uuid":"p1","parentUuid":"a1","sessionId":"s4","timestamp":"2026-04-14T10:00:05.000Z","data":{"type":"hook_progress","hookEvent":"PreToolUse","hookName":"PreToolUse:Bash"},"toolUseID":"toolu_x"}
+{"type":"user","uuid":"u2","parentUuid":"a1","sessionId":"s4","timestamp":"2026-04-14T10:00:06.000Z","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}
+{"type":"custom-title","customTitle":"Test Session","uuid":"ct","parentUuid":null,"sessionId":"s4","timestamp":"2026-04-14T10:00:07.000Z"}

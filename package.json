@@ -1,0 +1,26 @@
+{
+  "name": "ccthread",
+  "version": "0.1.0",
+  "description": "Read, search, and summarize Claude Code conversation logs from the CLI.",
+  "type": "module",
+  "private": false,
+  "license": "MIT",
+  "author": "Jake Marsh",
+  "repository": "github:jakemarsh/ccthread",
+  "bin": {
+    "ccthread": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun run src/cli.ts",
+    "test": "bun test",
+    "build": "bun build src/cli.ts --compile --outfile dist/ccthread --define CCTHREAD_VERSION='\"0.1.0\"'",
+    "build:all": "bun run scripts/build-all.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.0"
+  },
+  "dependencies": {
+    "citty": "^0.1.6"
+  }
+}
