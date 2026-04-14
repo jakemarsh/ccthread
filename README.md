@@ -1,21 +1,36 @@
 # ccthread
 
-Read, search, and summarize your Claude Code conversation history from the CLI.
+Give your Claude Code agent access to every conversation you've ever had with it.
 
-Every Claude Code session lives as a `.jsonl` file in `~/.claude/projects/`. `ccthread` turns them into clean markdown you can actually read — or feed back into an agent that's reviewing past work.
+Every Claude Code session lives as a `.jsonl` file in `~/.claude/projects/`. `ccthread` reads them locally and turns them into clean markdown — so your agent can search, summarize, and quote from past work the way it already handles source files.
 
-- **Streaming**: handles 100+ MB session files without loading them whole.
-- **Every log type**: user/assistant messages, tool uses + results, thinking blocks, images, sidechains, system errors, compaction boundaries, and more — each rendered appropriately.
-- **Search**: cross-project keyword search with context windows; regex optional.
-- **Pagination by message**: 1-indexed pages so agents can ask for "page 3 of this long session" without byte math.
-- **Cross-platform**: single-file binary via `bun build --compile` (macOS, Linux, Windows).
-- **Claude Code plugin**: bundled skill so the agent can call `ccthread` automatically.
+## The point
+
+After you install ccthread as a Claude Code plugin, you can say things like:
+
+> *"What did we decide about rate limits in that session last Thursday?"*
+
+> *"Find the thread where we worked out the Retell setup and put what we learned in CLAUDE.md."*
+
+> *"Summarize everything I did on the checkout flow this week — I need to update the team."*
+
+> *"Make a skill out of the process we figured out for redacting test fixtures."*
+
+> *"Search for the port number we landed on for the local dev server."*
+
+Claude invokes `ccthread find` / `ccthread search` / `ccthread show` under the hood and answers from the real conversation content — not a reconstruction, not a guess. You can also use it directly from your shell; it has a proper `--help` and all the ergonomic flags you'd expect.
 
 ---
 
 ## Install
 
-**macOS / Linux**
+**As a Claude Code plugin (recommended)**
+```
+/plugin install ccthread
+```
+That's it. The bundled skill teaches Claude when and how to invoke the CLI. See [Claude Code skill](#claude-code-skill-the-hero-feature) below for what the agent can do with it.
+
+**macOS / Linux binary**
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.sh | sh
 ```
@@ -24,12 +39,6 @@ curl -fsSL https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.sh 
 ```powershell
 irm https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.ps1 | iex
 ```
-
-**As a Claude Code plugin**
-```
-/plugin install ccthread
-```
-After install, agents can invoke `ccthread` via the bundled skill whenever the user asks about past conversations. See [Claude Code skill](#claude-code-skill).
 
 **From source**
 ```sh
@@ -40,42 +49,80 @@ bun install && bun test && bun run build
 
 ---
 
-## Quickstart
+## TL;DR — the commands you'll actually use
 
 ```sh
-# What projects do I have?
-ccthread projects
-
-# 10 most recent sessions in a project
-ccthread list --project great-work --limit 10
-
-# Which old conversation mentioned Retell?
-ccthread find "retell phone" --limit 5
-
-# Read the first 50 messages of a session
-ccthread show 2F0A28FA
-
-# Pull every mention of "port 3000" with ±2 messages of context
-ccthread search "port 3000" --window 2
-
-# Stats for the last two weeks of a project
-ccthread stats --project great-work --since 2026-04-01
+ccthread find "stripe webhook"            # which old thread discussed this?
+ccthread show 2F0A28FA                    # read a session (paginated markdown)
+ccthread show last                        # read the most recent session
+ccthread search "rate limit" --window 2   # grep with surrounding context
+ccthread list --project great-work --since 2026-04-01
+ccthread info 2F0A28FA                    # metadata + token usage
+ccthread tools 2F0A28FA                   # tool-call breakdown
+ccthread stats --project great-work       # aggregate totals
+ccthread projects                         # list every project
 ```
+
+`<id>` accepts a UUID prefix (8+ hex chars), a file path, or the literal `last` / `latest`.
+
+Every command supports `--json`, `--plain`, and `--help`.
 
 ---
 
-## Commands
+## Claude Code skill (the hero feature)
 
-Every command accepts `--json` (structured output), `--plain` (no markdown), and `--help` for inline docs.
+The reason ccthread exists: **Claude can answer questions about your past conversations**. That's a genuinely new capability — before this, old sessions were opaque JSONL that nothing could read without tooling.
+
+### What you can ask
+
+**Recall decisions and values**
+> *"What port number did we use for the local Stripe webhook last time?"*
+Claude runs `ccthread search "stripe webhook" --window 3` and quotes the relevant messages.
+
+**Find an old session by topic**
+> *"Find the thread where we set up the Retell phone number."*
+Claude runs `ccthread find "retell"` and picks the right session, then `ccthread show <id>` to read it.
+
+**Summarize work for a teammate**
+> *"Summarize my work on the checkout refactor this week. Keep it under 200 words."*
+Claude runs `ccthread list --project <name> --since <date>` then `ccthread show` on each, then writes the summary.
+
+**Learn from past mistakes**
+> *"Why did we roll back the migration in that session two weeks ago? What happened?"*
+Claude runs `ccthread search "rollback"` or `ccthread info <id>`, reads the transcript around the decision, and explains.
+
+**Turn a past process into a skill**
+> *"Go look at that long session where we figured out how to deploy the Mac app via Sparkle — turn what we learned into a skill."*
+Claude runs `ccthread show <id> --no-thinking --tool-details none`, distills the steps, and writes a new `SKILL.md`.
+
+**Populate CLAUDE.md with project knowledge**
+> *"Look at my last month of sessions on great-work and pull out the conventions we've settled on into CLAUDE.md."*
+Claude iterates over `ccthread list --project great-work --since <date>` and `ccthread show`, then commits new sections to CLAUDE.md.
+
+**Answer questions across many sessions**
+> *"How often have I hit 'Overloaded' errors this week?"*
+Claude runs `ccthread stats --since <date>` (it reports api_errors directly) or `ccthread search "Overloaded"`.
+
+### How it works under the hood
+
+After `/plugin install ccthread`, the plugin registers a skill (`plugin/skills/ccthread/SKILL.md`) that tells Claude:
+- where past conversations live
+- which ccthread subcommand fits which kind of question
+- which flags to reach for (`--no-thinking` when summarizing, `--include-sidechains` when you want subagent work, `--json` when chaining)
+
+The skill auto-triggers on phrases like "past conversation", "old thread", "last session", "summarize", "what did we decide", "remember when", "find where we talked about". You can also call it directly: "use the ccthread skill to…"
+
+The CLI itself runs purely locally. Nothing leaves your machine. Files are read lazily via streams, so even 100+ MB sessions return page 1 in under a second.
+
+---
+
+## Direct CLI use
+
+You don't need to be in Claude Code to use ccthread — it's a proper Unix CLI.
 
 ### `ccthread projects`
 
 List every project under `~/.claude/projects/` with session counts and last-active date.
-
-```sh
-ccthread projects              # markdown list
-ccthread projects --json       # JSON array
-```
 
 ### `ccthread list`
 
@@ -93,42 +140,40 @@ Columns: short id · start date · #messages · duration · model · title. A `p
 
 ### `ccthread show <id-or-path>`
 
-Print a single conversation as paginated markdown. `<id>` accepts a UUID prefix (≥6 hex chars), a full UUID, a file path, or the literal `last` / `latest` for the most recently modified session.
+Print a single conversation as paginated markdown.
 
 | Flag | Meaning |
 |---|---|
 | `--page N` | 1-indexed page (default 1). |
 | `--per-page M` | Messages per page (default 50). |
-| `--from N --to M` | 0-indexed half-open message range (alternative to pagination). |
+| `--from N --to M` | 0-indexed half-open range (alternative to pagination). |
 | `--no-thinking` | Hide thinking blocks. Shown by default. |
 | `--include-sidechains` | Inline subagent sidechain messages. Hidden by default. |
-| `--tool-details full\|summary\|none` | Tool-result display. Default `summary` (40 lines). `full` shows untruncated; `none` hides bodies. |
-| `--count-total` | Pre-scan to compute total message count (enables accurate "Page N of M"). Costs one extra file read. |
-| `--verbose` | Also show hook / progress / attachment noise normally filtered. |
-| `--utc` | Format timestamps in UTC. |
+| `--tool-details full\|summary\|none` | Tool-result display. Default `summary` (40 lines). `full` = untruncated; `none` = hide bodies. |
+| `--count-total` | Pre-scan to compute total message count (enables "Page N of M"). One extra file read. |
+| `--verbose` | Also show hook / progress / attachment noise. |
+| `--utc` | Timestamps in UTC. |
 
-**What gets rendered by default** (everything else is hidden, overridable with `--verbose`):
+**What's rendered by default** (everything else is hidden; `--verbose` reveals the noise):
 
-| Line type | Default rendering |
+| Line type | Default |
 |---|---|
 | `user` with text/image/tool_use/etc | 👤 User |
-| `user` with only `tool_result` blocks | 🧩 Tool result under previous tool_use |
+| `user` with only `tool_result` blocks | 🧩 Tool result, attached to preceding tool_use |
 | `assistant` | 🤖 Assistant (with model + cache-hit tokens) |
 | `system` `api_error` | ⚠️ API error (status + message) |
-| `system` `compact_boundary` | horizontal rule + "_Context compacted_" |
+| `system` `compact_boundary` | rule + "_Context compacted_" |
 | `system` `local_command` / `scheduled_task_fire` | one-line note |
-| `permission-mode` | inline "_Permission mode → X_" |
-| `pr-link` | 🔗 PR link in the doc header |
+| `permission-mode` | inline note |
+| `pr-link` | 🔗 link in the doc header |
 | `progress` / `attachment` / `queue-operation` / `turn_duration` / `bridge_status` / `agent-name` / `last-prompt` / `file-history-snapshot` | hidden |
 | `isSidechain: true` (any type) | hidden unless `--include-sidechains` |
 
-Images are always stripped to a size label (`[image: image/png, 124 KB]`). Base64 data never leaks into output.
-
-Long tool results that overflow to sibling `tool-results/<id>.txt` files are resolved and inlined (still subject to truncation).
+Images are stripped to size labels (`[image: image/png, 124 KB]`). Base64 data never leaks into output. Long tool results that overflow to sibling `tool-results/<id>.txt` files are resolved inline.
 
 ### `ccthread find <query>`
 
-One line per session that contains the keyword. Good for *"which old thread talked about X?"*. Lighter than `search`.
+One line per session that contains the keyword. Use this for *"which old thread was X in?"*.
 
 | Flag | Meaning |
 |---|---|
@@ -140,34 +185,34 @@ Substring match, case-insensitive.
 
 ### `ccthread search <query>`
 
-Cross-project keyword search with context windows — ±N messages around each hit. Returns grouped output: one section per session, each match headed by `### Match: "..." @ msg N`.
+Keyword search with ±N messages of context around each hit. Grouped output: one section per session, each hit headed by `### Match: "..." @ msg N`.
 
 | Flag | Meaning |
 |---|---|
 | `--project <name>` | Scope to one project. |
 | `--session <id>` | Scope to one session. |
-| `--since <ISO>` / `--until <ISO>` | Date range filter (on file mtime). |
+| `--since <ISO>` / `--until <ISO>` | Date range filter. |
 | `--window N` | Messages before AND after each hit (default 2). |
-| `--limit N` | Max sessions returned (default 20). |
+| `--limit N` | Max sessions (default 20). |
 | `--max-matches-per-session N` | Cap hits per session (default 5). |
 | `--regex` | Treat query as ECMAScript regex. |
 | `--case-sensitive` | Case-sensitive match. |
-| `--role user\|assistant\|tool_use\|tool_result\|thinking\|any` | Restrict matches by message role. |
-| `--fields text,tool_use,tool_result,thinking` | Which content to search within (default `text,tool_use,tool_result`; add `thinking` to include reasoning). |
+| `--role user\|assistant\|tool_use\|tool_result\|thinking\|any` | Restrict matches by role. |
+| `--fields text,tool_use,tool_result,thinking` | Which content to search within (default `text,tool_use,tool_result`). |
 | `--sort recent\|oldest\|hits` | Session ordering. |
-| `--include-sidechains` | Include subagent sidechain content. |
+| `--include-sidechains` | Include subagent content. |
 
 ### `ccthread info <id>`
 
-Everything the tool knows about one session: cwd, git branch, models used, start/end/duration, message counts per type, token totals (input/output/cache-hit/cache-create), tool-call breakdown, interrupted/api-error/compact counts.
+Full metadata for one session: project, cwd, git branch, models, start/end/duration, message counts per type, token totals (input/output/cache-hit/cache-create), tool-call breakdown, interrupted/api-error/compact-boundary counts.
 
 ### `ccthread tools <id>`
 
-Tool-usage breakdown for one session. `--top N` limits the list.
+Tool-usage breakdown for one session (Bash: 412, Edit: 203, …). `--top N` limits the list.
 
 ### `ccthread stats`
 
-Aggregate totals across many sessions. Without scope it covers everything; scope with `--project`, `--since`, `--until`, or combine them.
+Aggregate totals across many sessions. Scope with `--project`, `--since`, `--until`, or combine.
 
 | Flag | Meaning |
 |---|---|
@@ -175,7 +220,7 @@ Aggregate totals across many sessions. Without scope it covers everything; scope
 | `--since <ISO>` / `--until <ISO>` | Date range. |
 | `--group-by project\|day\|model` | Emit a markdown table broken down by the chosen key. |
 
-Shows: session count, message count, total duration, role counts, token totals (with cache-hit percentage), top tools, top models, and interrupted/api-error/compact-boundary counts.
+Shows: session count, message count, total duration, role counts, token totals (with cache-hit percentage), top tools, top models, interrupted/api-error/compact-boundary counts.
 
 ---
 
@@ -183,95 +228,48 @@ Shows: session count, message count, total duration, role counts, token totals (
 
 | Flag / env | Meaning |
 |---|---|
-| `--help`, `-h` | Show usage for the main command or a subcommand. |
+| `--help`, `-h` | Usage for main or any subcommand. |
 | `--version`, `-v` | Print the ccthread version. |
 | `--strict` | Exit on malformed JSON lines instead of warning + continuing. |
 | `--silent` | Suppress stderr warnings. |
-| `CCTHREAD_PROJECTS_DIR` | Override the projects directory (default `~/.claude/projects`). Useful for testing. |
+| `CCTHREAD_PROJECTS_DIR` | Override projects directory (default `~/.claude/projects`). |
 | `CCTHREAD_STRICT=1` | Same as `--strict`. |
 | `CCTHREAD_SILENT=1` | Same as `--silent`. |
 
-**Exit codes**: `0` success · `1` runtime error · `2` bad args or invalid input · `3` session/project not found · `4` ambiguous session id.
+**Exit codes**: `0` ok · `1` runtime error · `2` bad args / invalid input · `3` session or project not found · `4` ambiguous session id.
 
 ---
 
 ## Session identifiers
 
-Anywhere `<id>` is accepted, you can pass:
+Anywhere `<id>` is accepted you can pass:
 
 - A **full UUID** (`2F0A28FA-23B0-41ED-BF9C-2E13144B9BED`)
 - A **hex prefix ≥6 characters** (`2F0A28FA`) — disambiguated across all projects
 - A **file path** (absolute, `./relative`, or `~`-rooted)
-- **`last`** or **`latest`** — the most recently modified session
+- **`last`** or **`latest`** — the most recently modified session anywhere
 
 Ambiguous prefix → exit 4 with a list of candidates.
 
 ---
 
-## Use cases
-
-**Find something discussed before**
-```sh
-ccthread search "cache_read_input_tokens" --window 1
-```
-
-**Summarize the past week for a teammate**
-```sh
-ccthread list --project great-work --since $(date -v-7d +%F)
-ccthread show <id> --tool-details summary   # for each interesting session
-```
-
-**Turn a past process into a skill**
-```sh
-ccthread show <id> --no-thinking --tool-details none > process.md
-# Distill process.md into a new SKILL.md
-```
-
-**Populate a project's `CLAUDE.md`**
-```sh
-ccthread list --project <name> --since <date>
-ccthread show <id>                          # review
-```
-
-**Learn from past mistakes**
-```sh
-ccthread search "api error" --window 3
-ccthread info <id>                           # duration, error count, etc.
-```
-
----
-
-## Claude Code skill
-
-The plugin ships a `ccthread` skill so Claude Code agents can call the CLI when the user asks about past work. After `/plugin install ccthread`:
-
-> *"What did we decide about the rate limiter in that session last week?"*
-
-Claude invokes `ccthread find` / `ccthread search` / `ccthread show` as needed and answers from the real conversation content.
-
-See [`plugin/skills/ccthread/SKILL.md`](plugin/skills/ccthread/SKILL.md) for the patterns the skill recognizes.
-
----
-
 ## How it works
 
-`ccthread` reads `~/.claude/projects/<encoded-project>/<uuid>.jsonl` files, streams them line-by-line (never loads whole files — some are 100+ MB), and emits markdown. Streaming means:
+`ccthread` reads `~/.claude/projects/<encoded-project>/<uuid>.jsonl` files and streams them line-by-line (never loads whole files — some are 100+ MB). Streaming means:
 
-- `show` returns page 1 in ~80ms even on a 56 MB file.
+- `show` returns page 1 in ~80 ms even on a 56 MB file.
 - `find` across 11,000+ sessions finishes in ~0.4 s.
 - Memory usage stays roughly constant regardless of file size.
 
-Every recent log-line type is handled. Images are stripped to size labels. Base64 data never leaks into output. Tool-result overflow files (`<session>/tool-results/<id>.txt`) are auto-resolved.
-
-Everything runs locally. Nothing is transmitted.
+Every recent log-line type is handled. Images are stripped to size labels. Tool-result overflow files are auto-resolved. Everything runs locally.
 
 ---
 
 ## Caveats
 
 - Your `.jsonl` files contain whatever you and your tools wrote during sessions — including any secrets that leaked into prompts or tool output. `ccthread` only reads them locally, but piping output elsewhere ships that content along.
-- Project-name decoding is lossy (dash vs slash ambiguity in encoded names). We walk the filesystem to disambiguate; edge cases show the naive decode.
-- Branch rendering (multi-child `parentUuid` chains) is not implemented in v0.1.0 — we render in file order.
+- Project-name decoding is lossy (dash vs slash ambiguity). We walk the filesystem to disambiguate; rare edge cases show the naive decode.
+- Branch rendering (multi-child `parentUuid` chains) is not implemented — v0.1.0 renders in file order.
 
 ## Roadmap
 
