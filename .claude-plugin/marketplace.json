@@ -1,0 +1,11 @@
+{
+  "name": "jakemarsh",
+  "owner": { "name": "Jake Marsh" },
+  "plugins": [
+    {
+      "name": "ccthread",
+      "source": "./plugin",
+      "description": "Read, search, and have Claude summarize your Claude Code conversation logs."
+    }
+  ]
+}

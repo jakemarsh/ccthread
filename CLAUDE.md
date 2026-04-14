@@ -41,6 +41,8 @@ src/
 tests/
   fixtures/             # small crafted .jsonl files covering every message type we render
   *.test.ts             # unit + command-level tests (bun test)
+.claude-plugin/marketplace.json   # makes the repo itself a marketplace
+                                  # (`/plugin marketplace add jakemarsh/ccthread`)
 plugin/
   .claude-plugin/plugin.json
   bin/ccthread          # POSIX dispatcher

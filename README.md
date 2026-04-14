@@ -22,22 +22,35 @@ Claude runs `ccthread find` / `search` / `show` and answers from the actual conv
 
 ## Install
 
-As a Claude Code plugin:
+There are two pieces you might want: the **plugin** (so Claude Code can use ccthread automatically when you ask about past sessions) and the **binary** (so you can run `ccthread` yourself in a shell). The plugin installs the binary for you on first run, so you don't need both unless you want the CLI on your PATH.
+
+### As a Claude Code plugin
+
+This repo doubles as its own marketplace. Register it, then install the plugin:
+
 ```
-/plugin install ccthread
+/plugin marketplace add jakemarsh/ccthread
+/plugin install ccthread@jakemarsh
 ```
 
-macOS / Linux binary:
+After `/plugin install`, the bundled skill teaches Claude when to invoke the CLI and the dispatcher script downloads the matching binary from GitHub Releases on first use.
+
+### As a standalone CLI
+
+macOS / Linux:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.sh | sh
 ```
 
-Windows:
+Windows (PowerShell):
 ```powershell
 irm https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.ps1 | iex
 ```
 
-From source:
+Both scripts fetch the matching binary from the latest GitHub Release and drop it in `/usr/local/bin` (or `~/.local/bin` as fallback) / `%LOCALAPPDATA%\Programs\ccthread\`.
+
+### From source
+
 ```sh
 git clone https://github.com/jakemarsh/ccthread && cd ccthread
 bun install && bun test && bun run build

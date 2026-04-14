@@ -62,4 +62,4 @@ ccthread tools <id>
 
 ## Install / manual use
 
-Users can also install the `ccthread` binary directly from GitHub Releases and run it themselves. See https://github.com/jakemarsh/ccthread
+This plugin registers itself from the `jakemarsh` marketplace (same repo). If you're using ccthread here, it's already installed. To run the CLI directly in a shell, install the binary from GitHub Releases: https://github.com/jakemarsh/ccthread
