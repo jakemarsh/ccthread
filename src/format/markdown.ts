@@ -166,7 +166,7 @@ export function renderLine(
   }
 }
 
-function renderUser(line: UserLine, idx: number, totalRendered: number, opts: Required<RenderOptions>): RenderLineResult {
+function renderUser(line: UserLine, idx: number, totalRendered: number, opts: RenderOptions & typeof DEFAULTS): RenderLineResult {
   const blocks = contentBlocks(line.message);
   const onlyToolResults = blocks.length > 0 && blocks.every(b => b.type === "tool_result");
   if (onlyToolResults) {
@@ -186,7 +186,7 @@ function renderUser(line: UserLine, idx: number, totalRendered: number, opts: Re
   return { stages: [{ kind: "message", body: `${header}\n${bodyNormalized}`.trim() }], countsAsMessage: true };
 }
 
-function renderAssistant(line: AssistantLine, idx: number, totalRendered: number, opts: Required<RenderOptions>): RenderLineResult {
+function renderAssistant(line: AssistantLine, idx: number, totalRendered: number, opts: RenderOptions & typeof DEFAULTS): RenderLineResult {
   const model = line.message?.model ? ` (${line.message.model.replace(/^claude-/, "")}` : "";
   const cache = line.message?.usage?.cache_read_input_tokens;
   const cacheStr = cache ? `, ${cache} cache-hit tokens)` : model ? ")" : "";
@@ -195,7 +195,7 @@ function renderAssistant(line: AssistantLine, idx: number, totalRendered: number
   return { stages: [{ kind: "message", body: `${header}\n${body}`.trim() }], countsAsMessage: true };
 }
 
-function renderSystem(line: SystemLine, opts: Required<RenderOptions>): RenderLineResult {
+function renderSystem(line: SystemLine, opts: RenderOptions & typeof DEFAULTS): RenderLineResult {
   switch (line.subtype) {
     case "api_error": {
       const err: any = line.error ?? {};
@@ -229,7 +229,7 @@ function renderSystem(line: SystemLine, opts: Required<RenderOptions>): RenderLi
   }
 }
 
-function renderContentBlocks(blocks: ContentBlock[], opts: Required<RenderOptions>, line: LogLine): string {
+function renderContentBlocks(blocks: ContentBlock[], opts: RenderOptions & typeof DEFAULTS, line: LogLine): string {
   const parts: string[] = [];
   for (const b of blocks) {
     switch (b.type) {
@@ -248,7 +248,7 @@ function renderContentBlocks(blocks: ContentBlock[], opts: Required<RenderOption
   return parts.filter(Boolean).join("\n\n");
 }
 
-function renderText(text: string, opts: Required<RenderOptions>): string {
+function renderText(text: string, opts: RenderOptions & typeof DEFAULTS): string {
   // System reminders (inline tag) → muted blockquote.
   const sysTag = /<system-reminder>([\s\S]*?)<\/system-reminder>/g;
   const cmdTag = /<command-name>([\s\S]*?)<\/command-name>/g;
@@ -265,7 +265,7 @@ function renderThinking(text: string): string {
   return `> _thinking_\n${lines}`;
 }
 
-function renderToolUse(b: ToolUseBlock, opts: Required<RenderOptions>): string {
+function renderToolUse(b: ToolUseBlock, opts: RenderOptions & typeof DEFAULTS): string {
   const shortId = (b.id || "").slice(-6);
   const header = `tool-use ${b.name}${shortId ? ` (${shortId})` : ""}`;
   const input = b.input ?? {};
@@ -278,7 +278,7 @@ function renderToolUse(b: ToolUseBlock, opts: Required<RenderOptions>): string {
   return codeFence(opts.plain ? null : header, body, opts);
 }
 
-function renderToolResult(b: ToolResultBlock, opts: Required<RenderOptions>, line: LogLine): string {
+function renderToolResult(b: ToolResultBlock, opts: RenderOptions & typeof DEFAULTS, line: LogLine): string {
   const shortId = (b.tool_use_id || "").slice(-6);
   const status = b.is_error ? "error" : "ok";
   if (opts.toolDetails === "none") {

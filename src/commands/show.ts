@@ -123,6 +123,9 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
   out.push(header);
   if (emittedIdx === 0 && (!opts.countTotal || total === 0)) {
     out.push("_(no rendered messages in this session)_");
+  } else if (body.length === 0 && fromIdx >= emittedIdx) {
+    const pageCount = total ? Math.ceil(total / perPage) : Math.max(1, Math.ceil(emittedIdx / perPage));
+    out.push(`_Page ${page} is past the end (${emittedIdx} messages, ${pageCount} page${pageCount === 1 ? "" : "s"})._`);
   } else {
     const end = Math.min(toIdx, total || emittedIdx);
     const pageCount = total ? Math.ceil(total / perPage) : null;

@@ -107,6 +107,17 @@ Every line is one JSON object. Not every line is a user/assistant message. Every
 - Add a fixture (tiny `.jsonl` file) for each edge case; assert on rendered output.
 - Set `CCTHREAD_SMOKE=1` to (in the future) run a gated pass across the host's real projects dir.
 
+### Regression tests are mandatory
+
+**Every bug we fix gets a test.** No exceptions. When you find a bug (edge case, crash, wrong output, wrong exit code, silent failure, etc.):
+
+1. Write a failing test that reproduces it (usually in `tests/regressions.test.ts` or alongside the relevant subject).
+2. Fix the bug.
+3. Confirm the test passes.
+4. Commit the test and fix together so future agents see why the check exists.
+
+Avoid cheating tests to make them pass (weakening assertions, adding skipped cases, deleting tricky expectations). If a test is hard to pass, the code is probably wrong.
+
 ## Build & release
 
 - Local dev: `bun run src/cli.ts <subcommand> ...`
