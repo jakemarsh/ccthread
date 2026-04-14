@@ -65,7 +65,7 @@ const show = defineCommand({
     to: { type: "string", description: "Render messages up to but not including this 0-indexed position." },
     "no-thinking": { type: "boolean", default: false, description: "Hide thinking blocks (shown by default)." },
     "include-sidechains": { type: "boolean", default: false, description: "Inline subagent sidechain messages (hidden by default)." },
-    "tool-details": { type: "string", description: "Tool-result rendering: brief (default, 40-line truncation), full (no truncation), or none (hide bodies, show one-line status). 'summary' is accepted as a back-compat alias for 'brief'." },
+    "tool-details": { type: "string", description: "Tool-result rendering: brief (default, 40-line truncation), full (no truncation), or none (hide bodies, show one-line status)." },
     "count-total": { type: "boolean", default: false, description: "Pre-scan to compute total message count (enables accurate 'Page N of M'). Costs one extra read of the file." },
     verbose: { type: "boolean", default: false, description: "Also show hook/progress/attachment noise usually filtered." },
     utc: { type: "boolean", default: false, description: "Format timestamps in UTC instead of local time." },

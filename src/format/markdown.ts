@@ -11,7 +11,7 @@ export interface RenderOptions {
   plain?: boolean;            // no emoji, no code-fence lang hints
   thinking?: boolean;         // default true; --no-thinking flips to false
   sidechains?: boolean;       // default false
-  toolDetails?: "full" | "brief" | "none" | "summary" /* deprecated alias for brief */;
+  toolDetails?: "full" | "brief" | "none";
   verbose?: boolean;          // show hidden hook/attachment/etc lines
   utc?: boolean;
   sessionPath?: string;       // used for overflow resolution

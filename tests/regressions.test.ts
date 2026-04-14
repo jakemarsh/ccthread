@@ -189,12 +189,6 @@ describe("regressions", () => {
     expect(err?.message ?? "").toMatch(/invalid --tool-details/);
   });
 
-  // The flag renamed from "summary" → "brief" to avoid overloading. The old
-  // value must keep working as a back-compat alias.
-  test("show --tool-details summary still works as alias for brief", async () => {
-    const out = await runShow(join(FX, "tool-use-and-result.jsonl"), { toolDetails: "summary" as any });
-    expect(out).toContain("tool-result");
-  });
 
   // Bug: --since and --until silently accepted unparseable strings (NaN
   // comparison meant nothing ever matched, exit 0 with "(no sessions match)").

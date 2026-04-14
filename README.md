@@ -1,8 +1,8 @@
 # ccthread
 
-Read, search, and summarize Claude Code conversation logs from the CLI.
+Read and search your Claude Code conversation logs from the CLI.
 
-Every Claude Code session gets saved as a `.jsonl` file in `~/.claude/projects/`. `ccthread` reads them and turns them into clean markdown, so you (or your agent) can actually do something with them.
+Every Claude Code session gets saved as a `.jsonl` file in `~/.claude/projects/`. `ccthread` reads them and turns them into clean markdown, so you — or an agent — can actually do something with them.
 
 ## Why
 
@@ -76,9 +76,9 @@ After `/plugin install ccthread`, the bundled skill tells Claude where past conv
 "Find the thread where we set up the ACME phone number."
 → `ccthread find "ACME"`, picks the right session, then `ccthread show <id>`.
 
-**Summarizing work for a teammate.**
+**Writing a recap for a teammate.**
 "Summarize my work on the checkout refactor this week. Under 200 words."
-→ `ccthread list --project <name> --since <date>` then `show` on each.
+→ `ccthread list --project <name> --since <date>` to find the sessions, then `show` on each one, then Claude writes the recap from the rendered transcripts.
 
 **Learning from past mistakes.**
 "Why did we roll back that migration two weeks ago?"
@@ -94,9 +94,9 @@ After `/plugin install ccthread`, the bundled skill tells Claude where past conv
 
 **Answering questions across many sessions.**
 "How often have I hit Overloaded errors this week?"
-→ `ccthread stats --since <date>` (reports api_errors directly) or `ccthread search "Overloaded"`.
+→ `ccthread stats --since <date>` reports api_errors directly, or `ccthread search "Overloaded"` for per-match detail.
 
-Everything runs locally — nothing leaves your machine. Files are streamed, so a 100 MB session still returns page 1 in under a second.
+`ccthread` itself is just the reader — the agent does the thinking, reading its output like it would a source file. Everything runs locally; nothing leaves your machine. Files are streamed, so a 100 MB session still returns page 1 in under a second.
 
 ## Direct CLI use
 
@@ -127,25 +127,38 @@ Columns: short id · start date · #messages · duration · model · title. A `p
 | `--from N --to M` | 0-indexed half-open range. |
 | `--no-thinking` | Hide thinking blocks. |
 | `--include-sidechains` | Inline subagent sidechain messages. |
-| `--tool-details full\|brief\|none` | Default `brief` (40-line truncation per tool result). `full` = untruncated. `none` = hide bodies. (`summary` is a back-compat alias for `brief`.) |
+| `--tool-details full\|brief\|none` | Default `brief` (40-line truncation per tool result). `full` = untruncated. `none` = hide bodies. |
 | `--count-total` | Pre-scan for accurate "Page N of M" (one extra file read). |
 | `--verbose` | Show hook / progress / attachment lines too. |
 | `--utc` | UTC timestamps. |
 
-What's rendered by default (everything else is hidden unless `--verbose`):
+### What gets rendered
 
-| Line type | Default |
-|---|---|
-| `user` with text/image/tool_use | 👤 User |
-| `user` with only `tool_result` blocks | 🧩 Tool result, attached to preceding tool_use |
-| `assistant` | 🤖 Assistant (with model + cache-hit tokens) |
-| `system` `api_error` | ⚠️ API error (status + message) |
-| `system` `compact_boundary` | rule + "_Context compacted_" |
-| `system` `local_command` / `scheduled_task_fire` | one-line note |
-| `permission-mode` | inline note |
-| `pr-link` | 🔗 link in the doc header |
-| `progress` / `attachment` / `queue-operation` / `turn_duration` / `bridge_status` / `agent-name` / `last-prompt` / `file-history-snapshot` | hidden |
-| `isSidechain: true` (any type) | hidden unless `--include-sidechains` |
+Real log files contain a lot of bookkeeping that isn't useful for reading. `show` filters it down to the parts humans and agents care about, with `--verbose` and `--include-sidechains` to pull the rest in when you want them.
+
+**Shown by default**
+
+- 👤 **User messages** — regular text, images, tool-use requests
+- 🤖 **Assistant messages** — text, tool uses, with model + cache-hit token count in the header
+- 🧩 **Tool results** — attached under the preceding tool-use instead of rendering as a synthetic user message
+- ⚠️ **API errors** — status code + error message
+- **Context compaction** — rule + "_Context compacted_" where Claude Code compacted the session
+- **Local commands** — one-line note when you ran a slash command
+- **Scheduled task fires** — one-line note
+- **Permission mode changes** — inline "_Permission mode → X_"
+- 🔗 **PR links** — in the document header
+
+**Hidden by default** (use `--verbose` to see)
+
+- `progress` — hook execution progress (very noisy)
+- `attachment` — IPC metadata (tool lists, etc.)
+- `queue-operation` — background task bookkeeping
+- `turn_duration`, `bridge_status` — timing/transport internals
+- `agent-name`, `last-prompt`, `file-history-snapshot` — internal state
+
+**Hidden by default** (use `--include-sidechains` to see)
+
+- Any line where `isSidechain: true` — subagent threads
 
 Images are stripped to size labels (`[image: image/png, 124 KB]`). Base64 data never leaks into output. Long tool results that overflow to sibling `tool-results/<id>.txt` files get resolved inline.
 
@@ -182,7 +195,7 @@ Keyword search with ±N messages of context around each hit. One section per ses
 
 ### `ccthread info <id>`
 
-Full metadata for one session: project, cwd, git branch, models, start/end/duration, message counts per type, token totals (input / output / cache-hit / cache-create), tool-call breakdown, interrupted/api-error/compact-boundary counts.
+Quick overview of one session — numbers and metadata, not a narrative. Covers: project, cwd, git branch, models used, start/end/duration, message counts per type, token totals (input / output / cache-hit / cache-create), tool-call breakdown, and interrupted/api-error/compact-boundary counts. For prose about what actually happened in a session, read the session with `ccthread show` or let Claude summarize it for you.
 
 ### `ccthread tools <id>`
 
@@ -213,17 +226,6 @@ Shows: session count, messages, total duration, role counts, token totals (with 
 | `CCTHREAD_SILENT=1` | Same as `--silent`. |
 
 Exit codes: `0` ok, `1` runtime error, `2` bad args, `3` session/project not found, `4` ambiguous session id.
-
-## A note on the word "summarize"
-
-The word "summary" shows up in a few places and they all mean different things. Here's what each one is:
-
-- **"Summarize a session"** (workflow). You ask Claude to summarize past work and it runs `ccthread show` / `list` and writes prose. ccthread itself doesn't summarize — Claude does. The CLI's job is to hand over clean source material.
-- **`ccthread info <id>`** (command). Prints *metadata* about a session: counts, tokens, tools used, duration. This is **not** a prose summary of what the conversation was about.
-- **`--tool-details brief`** (flag, default). Truncates each tool result to 40 lines when rendering a session. The word "brief" used to be "summary" — `summary` still works as an alias.
-- **`summary` JSONL line type** (internal). A single-line record Claude Code writes when compacting a long session. It holds a short AI-generated session title and we use it to feed the title slot in `list` / `info` / the doc header. You won't see it in rendered output.
-
-If you're reading this and thinking "I want a paragraph describing what happened in this session" — that's the *workflow*, not a command. Ask Claude to do it.
 
 ## Session identifiers
 
