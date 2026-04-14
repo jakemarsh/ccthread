@@ -127,7 +127,7 @@ Columns: short id · start date · #messages · duration · model · title. A `p
 | `--from N --to M` | 0-indexed half-open range. |
 | `--no-thinking` | Hide thinking blocks. |
 | `--include-sidechains` | Inline subagent sidechain messages. |
-| `--tool-details full\|summary\|none` | Default `summary` (40 lines). `full` = untruncated. `none` = hide bodies. |
+| `--tool-details full\|brief\|none` | Default `brief` (40-line truncation per tool result). `full` = untruncated. `none` = hide bodies. (`summary` is a back-compat alias for `brief`.) |
 | `--count-total` | Pre-scan for accurate "Page N of M" (one extra file read). |
 | `--verbose` | Show hook / progress / attachment lines too. |
 | `--utc` | UTC timestamps. |
@@ -213,6 +213,17 @@ Shows: session count, messages, total duration, role counts, token totals (with 
 | `CCTHREAD_SILENT=1` | Same as `--silent`. |
 
 Exit codes: `0` ok, `1` runtime error, `2` bad args, `3` session/project not found, `4` ambiguous session id.
+
+## A note on the word "summarize"
+
+The word "summary" shows up in a few places and they all mean different things. Here's what each one is:
+
+- **"Summarize a session"** (workflow). You ask Claude to summarize past work and it runs `ccthread show` / `list` and writes prose. ccthread itself doesn't summarize — Claude does. The CLI's job is to hand over clean source material.
+- **`ccthread info <id>`** (command). Prints *metadata* about a session: counts, tokens, tools used, duration. This is **not** a prose summary of what the conversation was about.
+- **`--tool-details brief`** (flag, default). Truncates each tool result to 40 lines when rendering a session. The word "brief" used to be "summary" — `summary` still works as an alias.
+- **`summary` JSONL line type** (internal). A single-line record Claude Code writes when compacting a long session. It holds a short AI-generated session title and we use it to feed the title slot in `list` / `info` / the doc header. You won't see it in rendered output.
+
+If you're reading this and thinking "I want a paragraph describing what happened in this session" — that's the *workflow*, not a command. Ask Claude to do it.
 
 ## Session identifiers
 

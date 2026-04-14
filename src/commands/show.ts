@@ -21,15 +21,21 @@ export interface ShowOptions extends RenderOptions {
 export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise<string> {
   const ref = await resolveSession(idOrPath);
 
-  const td = opts.toolDetails ?? "summary";
-  const VALID_TD = new Set(["full", "summary", "none"]);
-  if (!VALID_TD.has(td)) throw new Error(`show: invalid --tool-details "${td}" (expected: full, summary, none)`);
+  // --tool-details: "brief" (default, truncated to 40 lines), "full" (no
+  // truncation), or "none" (one-line status only). "summary" is a
+  // back-compat alias for "brief" — kept to avoid breaking existing callers
+  // but renamed to avoid collision with the "summarize a session" use case
+  // and the JSONL "summary" line type.
+  let td = opts.toolDetails ?? "brief";
+  if ((td as any) === "summary") td = "brief";
+  const VALID_TD = new Set(["full", "brief", "none"]);
+  if (!VALID_TD.has(td as string)) throw new Error(`show: invalid --tool-details "${td}" (expected: full, brief, none)`);
 
   const renderOpts: RenderOptions = {
     ...opts,
     thinking: opts.noThinking ? false : (opts.thinking ?? true),
     sidechains: opts.includeSidechains ?? false,
-    toolDetails: td as "full" | "summary" | "none",
+    toolDetails: td as any,
     sessionPath: ref.path,
   };
 

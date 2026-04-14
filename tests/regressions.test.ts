@@ -189,6 +189,13 @@ describe("regressions", () => {
     expect(err?.message ?? "").toMatch(/invalid --tool-details/);
   });
 
+  // The flag renamed from "summary" → "brief" to avoid overloading. The old
+  // value must keep working as a back-compat alias.
+  test("show --tool-details summary still works as alias for brief", async () => {
+    const out = await runShow(join(FX, "tool-use-and-result.jsonl"), { toolDetails: "summary" as any });
+    expect(out).toContain("tool-result");
+  });
+
   // Bug: --since and --until silently accepted unparseable strings (NaN
   // comparison meant nothing ever matched, exit 0 with "(no sessions match)").
   test("list --since rejects unparseable date", async () => {
@@ -220,6 +227,20 @@ describe("regressions", () => {
     expect(show).toContain("Daily Report Workflow");
     const info = await runInfo(path);
     expect(info).toContain("Daily Report Workflow");
+  });
+
+  // Bug: search --role thinking/tool_use/tool_result was a no-op because the
+  // role filter only matched "user"/"assistant" top-level roles. Those three
+  // aren't roles — they're content-block types. Auto-narrow --fields.
+  test("search --role thinking finds hits inside thinking blocks", async () => {
+    // The thinking-and-images fixture has a thinking block containing "tiny red pixel".
+    const { runSearch } = await import("../src/commands/search.ts");
+    const out = await runSearch("tiny red pixel", {
+      session: join(FX, "thinking-and-images.jsonl"),
+      role: "thinking",
+      window: 0,
+    });
+    expect(out).toContain("1 session");
   });
 
   test("summary line does not render inline in the conversation body", async () => {

@@ -11,7 +11,7 @@ export interface RenderOptions {
   plain?: boolean;            // no emoji, no code-fence lang hints
   thinking?: boolean;         // default true; --no-thinking flips to false
   sidechains?: boolean;       // default false
-  toolDetails?: "full" | "summary" | "none";
+  toolDetails?: "full" | "brief" | "none" | "summary" /* deprecated alias for brief */;
   verbose?: boolean;          // show hidden hook/attachment/etc lines
   utc?: boolean;
   sessionPath?: string;       // used for overflow resolution
@@ -23,7 +23,7 @@ const DEFAULTS: Required<Pick<RenderOptions, "thinking" | "sidechains" | "toolDe
   plain: false,
   thinking: true,
   sidechains: false,
-  toolDetails: "summary",
+  toolDetails: "brief",
   verbose: false,
   utc: false,
 };

@@ -41,7 +41,15 @@ export async function runSearch(query: string, opts: SearchOptions = {}): Promis
     if (!VALID_ROLES.has(opts.role)) throw new Error(`search: invalid --role "${opts.role}" (expected: user, assistant, tool_use, tool_result, thinking, any)`);
   }
 
-  const fields = (opts.fields ?? "text,tool_use,tool_result").split(",").map(s => s.trim()).filter(Boolean);
+  // --role interacts with --fields: user/assistant filter messages by their
+  // top-level role; tool_use/tool_result/thinking narrow --fields to match
+  // only that content type (since those aren't top-level roles but content
+  // block types inside user/assistant messages).
+  let effectiveFields = opts.fields ?? "text,tool_use,tool_result";
+  if (opts.role === "tool_use" || opts.role === "tool_result" || opts.role === "thinking") {
+    effectiveFields = opts.role;
+  }
+  const fields = effectiveFields.split(",").map(s => s.trim()).filter(Boolean);
   const VALID_FIELDS = new Set(["text", "tool_use", "tool_result", "thinking"]);
   for (const f of fields) if (!VALID_FIELDS.has(f)) throw new Error(`search: invalid --fields value "${f}" (expected one of: text, tool_use, tool_result, thinking)`);
   const window = opts.window ?? 2;
@@ -147,7 +155,11 @@ async function scanSession(
   const hits: Match[] = [];
   for (let i = 0; i < entries.length && hits.length < maxPer; i++) {
     const e = entries[i]!;
-    if (opts.role && opts.role !== "any" && e.role !== opts.role) continue;
+    // Only "user"/"assistant" filter on the message's top-level role.
+    // tool_use/tool_result/thinking were narrowed via fields above.
+    if (opts.role === "user" || opts.role === "assistant") {
+      if (e.role !== opts.role) continue;
+    }
     const searchable = extractSearchable(e.line, fields);
     if (!matches(searchable)) continue;
     const snippet = buildSnippet(searchable, matches);
