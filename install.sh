@@ -29,6 +29,18 @@ trap 'rm -rf "$TMP"' EXIT
 
 echo "Downloading ccthread v$VERSION ($TARGET)…"
 curl -fSL "$URL" -o "$TMP/ccthread.tar.gz"
+if curl -fSL "$URL.sha256" -o "$TMP/ccthread.sha256" 2>/dev/null; then
+  EXPECTED=$(awk '{print $1}' "$TMP/ccthread.sha256")
+  if command -v shasum >/dev/null 2>&1; then
+    ACTUAL=$(shasum -a 256 "$TMP/ccthread.tar.gz" | awk '{print $1}')
+  else
+    ACTUAL=$(sha256sum "$TMP/ccthread.tar.gz" | awk '{print $1}')
+  fi
+  if [ "$EXPECTED" != "$ACTUAL" ]; then
+    echo "ccthread: SHA256 mismatch" >&2
+    exit 1
+  fi
+fi
 tar -xzf "$TMP/ccthread.tar.gz" -C "$TMP"
 
 # Pick install destination.

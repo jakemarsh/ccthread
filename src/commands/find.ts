@@ -81,6 +81,7 @@ async function scanOne(path: string, q: string, snippetLen: number): Promise<{ s
   let started: string | null = null;
   let firstUserText = "";
   let customTitle = "";
+  let aiTitle = "";
   let snippet: string | null = null;
 
   for await (const { line } of streamJsonl(path)) {
@@ -89,6 +90,11 @@ async function scanOne(path: string, q: string, snippetLen: number): Promise<{ s
     if ((line as any).type === "custom-title") {
       const ct = (line as any).customTitle;
       if (typeof ct === "string" && ct.trim()) customTitle = ct.trim();
+      continue;
+    }
+    if ((line as any).type === "ai-title") {
+      const at = (line as any).aiTitle;
+      if (typeof at === "string" && at.trim()) aiTitle = at.trim();
       continue;
     }
     if (snippet) continue; // keep first match's snippet
@@ -107,7 +113,7 @@ async function scanOne(path: string, q: string, snippetLen: number): Promise<{ s
     }
   }
   if (!snippet) return null;
-  return { started, title: customTitle || firstUserText, snippet };
+  return { started, title: customTitle || aiTitle || firstUserText, snippet };
 }
 
 function extractText(line: LogLine): string {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { defineCommand, runMain } from "citty";
+import { defineCommand, runCommand } from "citty";
 import { runProjects } from "./commands/projects.ts";
 import { runList } from "./commands/list.ts";
 import { runShow } from "./commands/show.ts";
@@ -205,10 +205,21 @@ const main = defineCommand({
     version: VERSION,
     description: "Read, search, and summarize Claude Code conversation logs.",
   },
+  args: {
+    strict: { type: "boolean", default: false, description: "Fail fast on malformed JSON lines" },
+    silent: { type: "boolean", default: false, description: "Suppress stderr warnings" },
+  },
+  setup({ args }) {
+    if (args.strict) process.env.CCTHREAD_STRICT = "1";
+    if (args.silent) process.env.CCTHREAD_SILENT = "1";
+  },
   subCommands: { projects, list, show, find, search, info, tools, stats },
 });
 
-await runMain(main).catch((err: unknown) => {
+try {
+  await runCommand(main, { rawArgs: process.argv.slice(2) });
+  process.exit(0);
+} catch (err: unknown) {
   if (err instanceof SessionAmbiguousError) {
     process.stderr.write(`ccthread: ${err.message}\n`);
     for (const m of err.matches) process.stderr.write(`  ${m.shortId}  ${m.project.decodedPath}  ${m.path}\n`);
@@ -222,6 +233,12 @@ await runMain(main).catch((err: unknown) => {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
   }
-  process.stderr.write(`ccthread: ${err instanceof Error ? err.message : String(err)}\n`);
+  // Missing required positional from citty → exit 2.
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/required (?:positional )?argument/i.test(msg) || /missing/i.test(msg)) {
+    process.stderr.write(`ccthread: ${msg}\n`);
+    process.exit(2);
+  }
+  process.stderr.write(`ccthread: ${msg}\n`);
   process.exit(1);
-});
+}

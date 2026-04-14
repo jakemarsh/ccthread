@@ -26,13 +26,29 @@ BIN="$DATA/bin/ccthread-$VERSION-$TARGET/$EXE"
 
 if [ ! -x "$BIN" ]; then
   mkdir -p "$(dirname "$BIN")"
-  URL="https://github.com/jakemarsh/ccthread/releases/download/v$VERSION/ccthread-v$VERSION-$TARGET.tar.gz"
+  BASE="https://github.com/jakemarsh/ccthread/releases/download/v$VERSION"
+  URL="$BASE/ccthread-v$VERSION-$TARGET.tar.gz"
   TMP=$(mktemp -d)
   trap 'rm -rf "$TMP"' EXIT
   if ! curl -fSL "$URL" -o "$TMP/ccthread.tar.gz" 2>/dev/null; then
     echo "ccthread: could not download $URL" >&2
     echo "Install manually: https://github.com/jakemarsh/ccthread/releases" >&2
     exit 1
+  fi
+  # Verify SHA256 if a sibling .sha256 exists at the release.
+  if curl -fSL "$URL.sha256" -o "$TMP/ccthread.sha256" 2>/dev/null; then
+    EXPECTED=$(awk '{print $1}' "$TMP/ccthread.sha256")
+    if command -v shasum >/dev/null 2>&1; then
+      ACTUAL=$(shasum -a 256 "$TMP/ccthread.tar.gz" | awk '{print $1}')
+    else
+      ACTUAL=$(sha256sum "$TMP/ccthread.tar.gz" | awk '{print $1}')
+    fi
+    if [ "$EXPECTED" != "$ACTUAL" ]; then
+      echo "ccthread: SHA256 mismatch for $URL" >&2
+      echo "  expected: $EXPECTED" >&2
+      echo "  got:      $ACTUAL" >&2
+      exit 1
+    fi
   fi
   tar -xzf "$TMP/ccthread.tar.gz" -C "$TMP"
   mv "$TMP"/*/"$EXE" "$BIN"

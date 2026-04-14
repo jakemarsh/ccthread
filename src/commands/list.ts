@@ -64,6 +64,7 @@ async function summarize(s: { shortId: string; sessionId: string; project: { dec
   let title = "";
   let model: string | null = null;
   let customTitle = "";
+  let aiTitle = "";
   let firstUserText = "";
 
   // Walk the whole file — could be big. For `list` it's worth it for accurate
@@ -72,6 +73,11 @@ async function summarize(s: { shortId: string; sessionId: string; project: { dec
     if (line.type === "custom-title") {
       const ct = (line as any).customTitle;
       if (typeof ct === "string" && ct.trim()) customTitle = ct.trim();
+      continue;
+    }
+    if (line.type === "ai-title") {
+      const at = (line as any).aiTitle;
+      if (typeof at === "string" && at.trim()) aiTitle = at.trim();
       continue;
     }
     if (isUser(line) || isAssistant(line)) {
@@ -84,7 +90,7 @@ async function summarize(s: { shortId: string; sessionId: string; project: { dec
       if (!firstUserText && isUser(line)) firstUserText = firstUserTextFrom(line as any);
     }
   }
-  title = customTitle || truncate(firstUserText, 60);
+  title = customTitle || aiTitle || truncate(firstUserText, 60);
 
   return {
     shortId: s.shortId,

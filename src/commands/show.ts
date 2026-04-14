@@ -60,6 +60,10 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
       const ct = (line as any).customTitle;
       if (typeof ct === "string" && ct.trim()) customTitle = ct.trim();
     }
+    if ((line as any).type === "ai-title" && !customTitle) {
+      const at = (line as any).aiTitle;
+      if (typeof at === "string" && at.trim()) customTitle = at.trim();
+    }
     if (isUser(line) || isAssistant(line)) {
       if (line.timestamp) {
         if (!firstTs) firstTs = line.timestamp;
@@ -117,13 +121,17 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
   }, renderOpts);
 
   out.push(header);
-  const end = Math.min(toIdx, total || toIdx);
-  const pageCount = total ? Math.ceil(total / perPage) : null;
-  const pageStr = pageCount
-    ? `_Page ${page} of ${pageCount} — messages ${fromIdx + 1}–${end} of ${total}._`
-    : `_Page ${page} — messages ${fromIdx + 1}–${end} (pass --count-total for total-page count)._`;
-  out.push(pageStr);
-  out.push(body.join("\n\n"));
+  if (emittedIdx === 0 && (!opts.countTotal || total === 0)) {
+    out.push("_(no rendered messages in this session)_");
+  } else {
+    const end = Math.min(toIdx, total || emittedIdx);
+    const pageCount = total ? Math.ceil(total / perPage) : null;
+    const pageStr = pageCount
+      ? `_Page ${page} of ${pageCount} — messages ${fromIdx + 1}–${end} of ${total}._`
+      : `_Page ${page} — messages ${fromIdx + 1}–${end} (pass --count-total for total-page count)._`;
+    out.push(pageStr);
+    out.push(body.join("\n\n"));
+  }
 
   return out.join("\n\n") + "\n";
 }

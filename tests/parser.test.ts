@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { streamJsonl, readAllLines } from "../src/parser/stream.ts";
+
+beforeAll(() => { process.env.CCTHREAD_SILENT = "1"; });
+afterAll(() => { delete process.env.CCTHREAD_SILENT; });
 import { contentBlocks, isAssistant, isUser } from "../src/parser/types.ts";
 import { join } from "node:path";
 

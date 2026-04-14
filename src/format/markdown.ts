@@ -153,6 +153,7 @@ export function renderLine(
     case "progress":
     case "attachment":
     case "custom-title":
+    case "ai-title":
     case "agent-name":
     case "last-prompt":
     case "file-history-snapshot":

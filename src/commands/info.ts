@@ -44,6 +44,10 @@ export async function runInfo(idOrPath: string, opts: InfoOptions = {}): Promise
       const ct = (line as any).customTitle;
       if (typeof ct === "string" && ct.trim()) customTitle = ct.trim();
     }
+    if ((line as any).type === "ai-title" && !customTitle) {
+      const at = (line as any).aiTitle;
+      if (typeof at === "string" && at.trim()) customTitle = at.trim();
+    }
 
     if (isSystem(line)) {
       if ((line as any).subtype === "api_error") apiErrors++;

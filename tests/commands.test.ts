@@ -22,11 +22,13 @@ beforeAll(() => {
   const projDir = join(TMP, "-tmp-ccthread-fixtures");
   cpSync(FX, projDir, { recursive: true });
   process.env.CCTHREAD_PROJECTS_DIR = TMP;
+  process.env.CCTHREAD_SILENT = "1";
 });
 
 afterAll(() => {
   rmSync(TMP, { recursive: true, force: true });
   delete process.env.CCTHREAD_PROJECTS_DIR;
+  delete process.env.CCTHREAD_SILENT;
 });
 
 describe("commands", () => {

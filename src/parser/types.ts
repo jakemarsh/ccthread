@@ -113,6 +113,7 @@ export interface SystemLine extends BaseLine {
 export interface AttachmentLine extends BaseLine { type: "attachment"; attachment?: unknown }
 export interface PermissionModeLine extends BaseLine { type: "permission-mode"; permissionMode?: string }
 export interface CustomTitleLine extends BaseLine { type: "custom-title"; customTitle?: string }
+export interface AiTitleLine extends BaseLine { type: "ai-title"; aiTitle?: string }
 export interface AgentNameLine extends BaseLine { type: "agent-name"; agentName?: string }
 export interface LastPromptLine extends BaseLine { type: "last-prompt"; lastPrompt?: string }
 export interface PrLinkLine extends BaseLine {
@@ -133,6 +134,7 @@ export type LogLine =
   | AttachmentLine
   | PermissionModeLine
   | CustomTitleLine
+  | AiTitleLine
   | AgentNameLine
   | LastPromptLine
   | PrLinkLine
