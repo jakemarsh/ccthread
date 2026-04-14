@@ -60,6 +60,13 @@ ccthread tools <id>
 - "update CLAUDE.md with lessons from recent work" → `ccthread list --project ... --since ...` → read → write
 - "find where we hit that bug and what we tried" → `ccthread find "<error text>"`
 
-## Install / manual use
+## Running ccthread outside this skill
 
-This plugin registers itself from the `jakemarsh` marketplace (same repo). If you're using ccthread here, it's already installed. To run the CLI directly in a shell, install the binary from GitHub Releases: https://github.com/jakemarsh/ccthread
+This skill is all you need when you're in Claude Code — the dispatcher keeps a cached binary under `~/.claude/plugins/data/ccthread/`. If you want `ccthread` on your shell PATH too, the project's install scripts drop it there:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.sh | sh          # macOS / Linux
+irm https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.ps1 | iex              # Windows PowerShell
+```
+
+Repo: https://github.com/jakemarsh/ccthread

@@ -22,32 +22,38 @@ Claude runs `ccthread find` / `search` / `show` and answers from the actual conv
 
 ## Install
 
-There are two pieces you might want: the **plugin** (so Claude Code can use ccthread automatically when you ask about past sessions) and the **binary** (so you can run `ccthread` yourself in a shell). The plugin installs the binary for you on first run, so you don't need both unless you want the CLI on your PATH.
+Pick whichever fits your setup. They're independent — you can do one, both, or neither and build from source.
 
-### As a Claude Code plugin
+### Option A — Claude Code plugin
 
-This repo doubles as its own marketplace. Register it, then install the plugin:
+Use this if you want Claude Code to call `ccthread` automatically when you ask about past conversations.
 
 ```
 /plugin marketplace add jakemarsh/ccthread
 /plugin install ccthread@jakemarsh
 ```
 
-After `/plugin install`, the bundled skill teaches Claude when to invoke the CLI and the dispatcher script downloads the matching binary from GitHub Releases on first use.
+The repo doubles as its own marketplace. `add` registers it; `install` activates the skill. The first time Claude invokes `ccthread`, the plugin's dispatcher downloads the matching binary for your platform and caches it under `~/.claude/plugins/data/ccthread/`. No other setup needed.
 
-### As a standalone CLI
+### Option B — standalone CLI on your PATH
+
+Use this if you want to run `ccthread` yourself in a shell (pipe it, script it, grep through it).
 
 macOS / Linux:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.sh | sh
 ```
+Drops `ccthread` in `/usr/local/bin` (or `~/.local/bin` if the first isn't writable).
 
 Windows (PowerShell):
 ```powershell
 irm https://raw.githubusercontent.com/jakemarsh/ccthread/main/install.ps1 | iex
 ```
+Drops `ccthread.exe` in `%LOCALAPPDATA%\Programs\ccthread\` and adds it to your user PATH.
 
-Both scripts fetch the matching binary from the latest GitHub Release and drop it in `/usr/local/bin` (or `~/.local/bin` as fallback) / `%LOCALAPPDATA%\Programs\ccthread\`.
+### Option A + B
+
+Doing both is fine and common. The plugin keeps its own cached binary (so it doesn't care whether `ccthread` is on your PATH), and you still get the CLI for your own shell work.
 
 ### From source
 
