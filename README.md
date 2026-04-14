@@ -1,6 +1,6 @@
 # ccthread
 
-Read and search your Claude Code conversation logs from the CLI.
+Read, search, and have Claude summarize your Claude Code conversation logs from the CLI.
 
 Every Claude Code session gets saved as a `.jsonl` file in `~/.claude/projects/`. `ccthread` reads them and turns them into clean markdown, so you — or an agent — can actually do something with them.
 
