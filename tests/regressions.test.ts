@@ -176,3 +176,72 @@ describe("regressions", () => {
     expect(out).not.toContain("(ai-title)");
   });
 });
+
+// CLI-surface regressions — spawn `bun run src/cli.ts` and check exit codes
+// and output. These are the slow ones; skip by setting CCTHREAD_NO_CLI=1.
+// CLI-surface regressions. These redirect the child's output to temp files
+// because bun test's own stdio plumbing swallows subprocess pipes. Gate with
+// CCTHREAD_NO_CLI=1 if you want to skip them.
+describe("regressions (cli)", () => {
+  const shouldSkip = process.env.CCTHREAD_NO_CLI === "1";
+  const REPO = join(import.meta.dir, "..");
+  const BIN_PATH = process.env.CCTHREAD_BIN || "/tmp/ccthread-test";
+
+  const cli = (args: string[], env: Record<string, string> = {}) => {
+    const outPath = join(TMP, `cli-${Math.random().toString(36).slice(2)}.out`);
+    const errPath = join(TMP, `cli-${Math.random().toString(36).slice(2)}.err`);
+    const proc = Bun.spawnSync({
+      cmd: ["sh", "-c", `"${BIN_PATH}" ${args.map(a => `"${a.replace(/"/g, '\\"')}"`).join(" ")} >"${outPath}" 2>"${errPath}"`],
+      cwd: REPO,
+      env: { ...process.env, CCTHREAD_SILENT: "1", ...env } as any,
+    });
+    let stdout = ""; try { stdout = require("node:fs").readFileSync(outPath, "utf8"); } catch {}
+    let stderr = ""; try { stderr = require("node:fs").readFileSync(errPath, "utf8"); } catch {}
+    return { status: proc.exitCode ?? 0, stdout, stderr };
+  };
+
+  const binMissing = !require("node:fs").existsSync(BIN_PATH);
+
+  test.skipIf(shouldSkip || binMissing)("--help prints usage and exits 0 (was: 'No command specified')", () => {
+    const r = cli(["--help"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout + r.stderr).toContain("USAGE");
+    expect(r.stdout + r.stderr).not.toContain("No command specified");
+  });
+
+  test.skipIf(shouldSkip || binMissing)("no args prints usage and exits 0", () => {
+    const r = cli([]);
+    expect(r.status).toBe(0);
+    expect(r.stdout + r.stderr).toContain("USAGE");
+  });
+
+  test.skipIf(shouldSkip || binMissing)("--version prints version and exits 0", () => {
+    const r = cli(["--version"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout.trim().length).toBeGreaterThan(0);
+  });
+
+  test.skipIf(shouldSkip || binMissing)("show --help prints subcommand usage, doesn't run the command", () => {
+    const r = cli(["show", "--help"]);
+    expect(r.status).toBe(0);
+    expect(r.stdout + r.stderr).toContain("ARGUMENTS");
+    expect(r.stdout + r.stderr).not.toContain("# Conversation");
+  });
+
+  test.skipIf(shouldSkip || binMissing)("unknown session id exits 3", () => {
+    const r = cli(["show", "nonexistent-xyz"], { CCTHREAD_PROJECTS_DIR: TMP });
+    expect(r.status).toBe(3);
+    expect(r.stderr).toContain("session not found");
+  });
+
+  test.skipIf(shouldSkip || binMissing)("missing required positional exits 2", () => {
+    const r = cli(["find"]);
+    expect(r.status).toBe(2);
+  });
+
+  test.skipIf(shouldSkip || binMissing)("invalid regex exits 2", () => {
+    const r = cli(["search", "[unclosed", "--regex"], { CCTHREAD_PROJECTS_DIR: TMP });
+    expect(r.status).toBe(2);
+    expect(r.stderr).toContain("Invalid regular expression");
+  });
+});

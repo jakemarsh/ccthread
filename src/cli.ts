@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { defineCommand, runCommand } from "citty";
+import { defineCommand, runCommand, showUsage } from "citty";
 import { runProjects } from "./commands/projects.ts";
 import { runList } from "./commands/list.ts";
 import { runShow } from "./commands/show.ts";
@@ -216,8 +216,39 @@ const main = defineCommand({
   subCommands: { projects, list, show, find, search, info, tools, stats },
 });
 
+// Handle --help / -h / --version explicitly since citty's runCommand won't
+// run the automatic help/version handlers without a `run` function on main.
+const argv = process.argv.slice(2);
+const wantsHelp = argv.includes("--help") || argv.includes("-h");
+const wantsVersion = argv.includes("--version") || argv.includes("-v");
+if (argv.length === 0 || (wantsHelp && argv.every(a => a.startsWith("-")))) {
+  await showUsage(main);
+  process.exit(0);
+}
+if (wantsVersion && argv.every(a => a.startsWith("-"))) {
+  process.stdout.write(VERSION + "\n");
+  process.exit(0);
+}
+if (wantsHelp) {
+  // Subcommand help: find the sub and showUsage on it.
+  const subName = argv.find(a => !a.startsWith("-"));
+  const subs = (main as any).subCommands;
+  const sub = subName ? await resolveSub(subs, subName) : null;
+  if (sub) {
+    await showUsage(sub, main);
+    process.exit(0);
+  }
+}
+
+async function resolveSub(subs: Record<string, unknown>, name: string): Promise<any | null> {
+  if (!subs || typeof subs !== "object") return null;
+  const v = (subs as any)[name];
+  if (!v) return null;
+  return typeof v === "function" ? await v() : v;
+}
+
 try {
-  await runCommand(main, { rawArgs: process.argv.slice(2) });
+  await runCommand(main, { rawArgs: argv });
   process.exit(0);
 } catch (err: unknown) {
   if (err instanceof SessionAmbiguousError) {
@@ -233,9 +264,12 @@ try {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
   }
-  // Missing required positional from citty → exit 2.
+  // Missing required positional or unknown argument from citty → exit 2
+  // (usage error, per sysexits.h EX_USAGE=64 in spirit).
   const msg = err instanceof Error ? err.message : String(err);
-  if (/required (?:positional )?argument/i.test(msg) || /missing/i.test(msg)) {
+  if (/Missing required (?:positional )?argument/i.test(msg)
+      || /Unknown (?:command|argument|option)/i.test(msg)
+      || /Invalid regular expression/i.test(msg)) {
     process.stderr.write(`ccthread: ${msg}\n`);
     process.exit(2);
   }

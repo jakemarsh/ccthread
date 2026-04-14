@@ -107,6 +107,10 @@ Every line is one JSON object. Not every line is a user/assistant message. Every
 - Add a fixture (tiny `.jsonl` file) for each edge case; assert on rendered output.
 - Set `CCTHREAD_SMOKE=1` to (in the future) run a gated pass across the host's real projects dir.
 
+### Commit style
+
+Commit small and often, grouped by logical change. One bug fix + its regression test = one commit. One new subcommand = one commit. Refactors, docs, and behavior changes go in separate commits — don't bundle. Push after each commit. Commit messages should lead with a short imperative summary and use the body to explain *why*, not *what* (the diff shows the what).
+
 ### Regression tests are mandatory
 
 **Every bug we fix gets a test.** No exceptions. When you find a bug (edge case, crash, wrong output, wrong exit code, silent failure, etc.):
