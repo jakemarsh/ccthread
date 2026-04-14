@@ -154,6 +154,7 @@ export function renderLine(
     case "attachment":
     case "custom-title":
     case "ai-title":
+    case "summary":
     case "agent-name":
     case "last-prompt":
     case "file-history-snapshot":

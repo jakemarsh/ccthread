@@ -83,6 +83,11 @@ async function summarize(s: { shortId: string; sessionId: string; project: { dec
       if (typeof at === "string" && at.trim()) aiTitle = at.trim();
       continue;
     }
+    if (line.type === "summary" && !aiTitle) {
+      const sm = (line as any).summary;
+      if (typeof sm === "string" && sm.trim()) aiTitle = sm.trim();
+      continue;
+    }
     if (isUser(line) || isAssistant(line)) {
       messages++;
       if (line.timestamp) {

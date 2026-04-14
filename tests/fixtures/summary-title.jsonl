@@ -1,0 +1,3 @@
+{"type":"summary","summary":"Daily Report Workflow Debugging and Accuracy Improvement","leafUuid":"1d4d0e38-3f9e-4a3e-80c7-67a9c79005f1"}
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"s-sum","timestamp":"2026-04-14T13:00:00.000Z","message":{"role":"user","content":"fix the report"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"s-sum","timestamp":"2026-04-14T13:00:01.000Z","message":{"id":"m1","role":"assistant","model":"claude-opus-4-6","content":[{"type":"text","text":"on it"}],"usage":{"input_tokens":1,"output_tokens":1}}}

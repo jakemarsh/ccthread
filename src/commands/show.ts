@@ -72,6 +72,10 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
       const at = (line as any).aiTitle;
       if (typeof at === "string" && at.trim()) customTitle = at.trim();
     }
+    if ((line as any).type === "summary" && !customTitle) {
+      const sm = (line as any).summary;
+      if (typeof sm === "string" && sm.trim()) customTitle = sm.trim();
+    }
     if (isUser(line) || isAssistant(line)) {
       if (line.timestamp) {
         if (!firstTs) firstTs = line.timestamp;

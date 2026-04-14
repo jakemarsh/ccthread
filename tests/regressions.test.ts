@@ -211,6 +211,25 @@ describe("regressions", () => {
     try { await runShow(join(FX, "minimal.jsonl"), { page: 0 }); } catch (e) { err = e; }
     expect(err?.message ?? "").toMatch(/must be >=/);
   });
+
+  // Bug: the "summary" line type (pre-compact AI-generated session title)
+  // was unknown. Stats counted it as a raw type; title wasn't surfaced.
+  test("summary line feeds title when no custom-title/ai-title", async () => {
+    const path = join(FX, "summary-title.jsonl");
+    const show = await runShow(path, {});
+    expect(show).toContain("Daily Report Workflow");
+    const info = await runInfo(path);
+    expect(info).toContain("Daily Report Workflow");
+  });
+
+  test("summary line does not render inline in the conversation body", async () => {
+    const path = join(FX, "summary-title.jsonl");
+    const show = await runShow(path, {});
+    // "Daily Report Workflow" should appear in the title slot, not as a
+    // standalone message bubble.
+    const bodyAfterHeader = show.split("## ")[0] + show.split("## ").slice(1).join("## ");
+    expect(show).not.toContain("(summary)");
+  });
 });
 
 // CLI-surface regressions — spawn `bun run src/cli.ts` and check exit codes

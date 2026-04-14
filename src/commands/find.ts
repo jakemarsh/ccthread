@@ -45,7 +45,13 @@ export async function runFind(query: string, opts: FindOptions = {}): Promise<st
   const BATCH = 8;
   for (let i = 0; i < sessions.length && hits.length < limit; i += BATCH) {
     const batch = sessions.slice(i, i + BATCH);
-    const results = await Promise.all(batch.map(s => scanOne(s.path, q, snippetLen)));
+    const results = await Promise.all(batch.map(async s => {
+      try { return await scanOne(s.path, q, snippetLen); }
+      catch (e) {
+        process.stderr.write(`warn: could not scan ${s.path}: ${e instanceof Error ? e.message : e}\n`);
+        return null;
+      }
+    }));
     for (let j = 0; j < batch.length; j++) {
       const r = results[j];
       if (!r) continue;
@@ -95,6 +101,11 @@ async function scanOne(path: string, q: string, snippetLen: number): Promise<{ s
     if ((line as any).type === "ai-title") {
       const at = (line as any).aiTitle;
       if (typeof at === "string" && at.trim()) aiTitle = at.trim();
+      continue;
+    }
+    if ((line as any).type === "summary" && !aiTitle) {
+      const sm = (line as any).summary;
+      if (typeof sm === "string" && sm.trim()) aiTitle = sm.trim();
       continue;
     }
     if (snippet) continue; // keep first match's snippet
