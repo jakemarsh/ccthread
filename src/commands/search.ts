@@ -18,6 +18,7 @@ export interface SearchOptions {
   fields?: string; // e.g. "text,tool_use,tool_result"
   sort?: "recent" | "oldest" | "hits";
   includeSidechains?: boolean;
+  beforeLastCompact?: boolean;
   json?: boolean;
   plain?: boolean;
 }
@@ -135,9 +136,23 @@ async function scanSession(
   // We need random access to build ±window slices. Session files are usually
   // small enough for this (tens to a few thousand messages); huge ones are the
   // edge case.
+  // --before-last-compact: find the last compact_boundary line index first.
+  let lastCompactFileIdx: number | null = null;
+  if (opts.beforeLastCompact) {
+    let fi = 0;
+    for await (const { line } of streamJsonl(path)) {
+      if ((line as any).type === "system" && (line as any).subtype === "compact_boundary") lastCompactFileIdx = fi;
+      fi++;
+    }
+    if (lastCompactFileIdx == null) return []; // no compact in this session
+  }
+
   const entries: { line: LogLine; rendered: string | null; role: string; index: number; timestamp: string | null }[] = [];
   let idx = 0;
+  let fileIdx = 0;
   for await (const { line } of streamJsonl(path)) {
+    if (lastCompactFileIdx != null && fileIdx >= lastCompactFileIdx) break;
+    fileIdx++;
     if (line.isSidechain && !opts.includeSidechains) continue;
     if (isUser(line) || isAssistant(line)) {
       const r = renderLine(line, { idx, totalRendered: 0, opts: { sessionPath: path } });

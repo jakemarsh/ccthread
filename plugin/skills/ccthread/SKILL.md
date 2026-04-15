@@ -10,6 +10,14 @@ You have a CLI tool `ccthread` available. It reads Claude Code conversation logs
 
 ## Common patterns
 
+**Look up something from THIS conversation**
+```
+ccthread show current                                # read the current session
+ccthread search "<what they asked about>" --session current --window 3
+ccthread show current --before-last-compact         # "before we compacted, what did you say?"
+```
+`current` resolves to whichever session invoked you — via the parent `claude` process's argv, or the plugin's SessionStart hook if argv doesn't carry it. Use it whenever the user says "in our conversation", "before we compacted", "earlier in this session", "what did you just say".
+
 **Find a conversation by topic**
 ```
 ccthread find "<keywords>" --limit 10

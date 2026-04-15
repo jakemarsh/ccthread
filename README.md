@@ -69,15 +69,17 @@ bun install && bun test && bun run build
 ccthread find "stripe webhook"            # which old thread discussed this?
 ccthread show 2F0A28FA                    # read a session (paginated markdown)
 ccthread show last                        # read the most recent session
+ccthread show current                     # read THIS session (auto-detected)
 ccthread search "rate limit" --window 2   # grep with surrounding context
 ccthread list --project great-work --since 2026-04-01
 ccthread info 2F0A28FA                    # metadata + token usage
 ccthread tools 2F0A28FA                   # tool-call breakdown
 ccthread stats --project great-work       # aggregate totals
 ccthread projects                         # list every project
+ccthread current                          # print the current session's id
 ```
 
-`<id>` can be a UUID prefix (8+ hex chars), a file path, or `last` / `latest`.
+`<id>` can be a UUID prefix (8+ hex chars), a file path, `last` / `latest`, or `current` (the session you're in right now, if ccthread is running inside Claude Code).
 
 Every command supports `--json`, `--plain`, and `--help`.
 
@@ -110,6 +112,10 @@ After `/plugin install ccthread`, the bundled skill tells Claude where past conv
 **Seeding CLAUDE.md with project knowledge.**
 "Look at my last month of sessions on great-work and pull conventions into CLAUDE.md."
 → Iterates over `ccthread list` + `ccthread show`, commits new sections.
+
+**Looking up something from the current conversation.**
+"Before we compacted, you said something useful about X — find it."
+→ `ccthread show current --before-last-compact` or `ccthread search "X" --session current --before-last-compact --window 3`. Works because Claude Code writes each session's transcript to disk as it goes, and ccthread can detect which session invoked it (via the parent `claude` process's argv, or the plugin's SessionStart hook for bare `claude` launches).
 
 **Answering questions across many sessions.**
 "How often have I hit Overloaded errors this week?"
@@ -254,6 +260,7 @@ Anywhere `<id>` is accepted you can pass:
 - A hex prefix of 6+ characters (`2F0A28FA`). Disambiguated across all projects.
 - A file path (absolute, `./relative`, or `~`-rooted).
 - `last` or `latest` for the most recently modified session anywhere.
+- `current` — the session that invoked ccthread. Detected in order: `CCTHREAD_SESSION_ID` env var → `--session-id` / `--resume` in an ancestor `claude` process's argv → a PID-keyed file written by the plugin's SessionStart hook. If none of those work, you'll get a clear error listing your options.
 
 Ambiguous prefix → exit 4 with a list of candidates.
 

@@ -237,6 +237,79 @@ describe("regressions", () => {
     expect(out).toContain("1 session");
   });
 
+  // The CCTHREAD_SESSION_ID env var is the bypass for Tier 1/2 detection —
+  // used by scripts and tests and when all else fails.
+  test("CCTHREAD_SESSION_ID env resolves 'current' to the matching fixture", async () => {
+    const { runCurrent } = await import("../src/commands/current.ts");
+    const fakeId = "aaaaaaaa-0000-0000-0000-000000000000"; // needs to be hex to pass UUID_RE
+    process.env.CCTHREAD_SESSION_ID = fakeId;
+    try {
+      const out = await runCurrent({ json: true });
+      const j = JSON.parse(out);
+      expect(j.sessionId).toBe(fakeId);
+      expect(j.source).toBe("env");
+    } finally {
+      delete process.env.CCTHREAD_SESSION_ID;
+    }
+  });
+
+  test("detectCurrentSession returns null when no signal is available", async () => {
+    const { detectCurrentSession } = await import("../src/util/current-session.ts");
+    // Scrub every env var the detector would honour so we only test the
+    // failure path.
+    const saved = process.env.CCTHREAD_SESSION_ID;
+    delete process.env.CCTHREAD_SESSION_ID;
+    try {
+      // In the test process, ancestors probably don't have --session-id in
+      // argv (bun test -> this process). Tier 2 shouldn't find anything.
+      // If it does (e.g. running inside stovetop), skip.
+      const got = detectCurrentSession();
+      if (got?.source === "argv" || got?.source === "hook") return; // environment-dependent, skip
+      expect(got).toBeNull();
+    } finally {
+      if (saved) process.env.CCTHREAD_SESSION_ID = saved;
+    }
+  });
+
+  // --before-last-compact narrows show/search to messages before the most
+  // recent compact_boundary line.
+  test("show --before-last-compact stops at the compact boundary", async () => {
+    const path = join(FX, "with-compact.jsonl");
+    const withFlag = await runShow(path, { beforeLastCompact: true });
+    const without = await runShow(path, {});
+    expect(withFlag).toContain("magic constant is 42");
+    expect(withFlag).not.toContain("post-compact reply");
+    expect(without).toContain("post-compact reply");
+  });
+
+  test("show --before-last-compact says so when the session has no compactions", async () => {
+    const path = join(FX, "minimal.jsonl");
+    const out = await runShow(path, { beforeLastCompact: true });
+    expect(out).toMatch(/hasn.?t been compacted/);
+  });
+
+  test("search --before-last-compact ignores post-compact matches", async () => {
+    const { runSearch } = await import("../src/commands/search.ts");
+    const path = join(FX, "with-compact.jsonl");
+    // "magic constant" appears both pre- and post-compact. Pre-compact only:
+    // 1 hit; post-compact phrase is not present with the scope restricted.
+    const out = await runSearch("magic constant", { session: path, beforeLastCompact: true, window: 0 });
+    expect(out).toContain("1 session");
+    expect(out).not.toContain("post-compact reply");
+  });
+
+  // Bug regression: the argv regex used \b before -- which doesn't match
+  // because both - and - are non-word characters, so session ids never
+  // extracted from the ancestor command line.
+  test("argv regex matches --session-id <uuid> and --resume <uuid> patterns", () => {
+    const SESSION_ID = /(?:^|\s)--session-id[ =]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+    const RESUME = /(?:^|\s)--resume[ =]([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+    const cmd1 = "claude --session-id 2F0A28FA-23B0-41ED-BF9C-2E13144B9BED --mcp-config foo";
+    const cmd2 = "claude --resume abc12345-1234-5678-9abc-def012345678";
+    expect(SESSION_ID.exec(cmd1)?.[1]).toBe("2F0A28FA-23B0-41ED-BF9C-2E13144B9BED");
+    expect(RESUME.exec(cmd2)?.[1]).toBe("abc12345-1234-5678-9abc-def012345678");
+  });
+
   test("summary line does not render inline in the conversation body", async () => {
     const path = join(FX, "summary-title.jsonl");
     const show = await runShow(path, {});

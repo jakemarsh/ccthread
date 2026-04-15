@@ -16,6 +16,7 @@ export interface ShowOptions extends RenderOptions {
   json?: boolean;
   noThinking?: boolean;
   includeSidechains?: boolean;
+  beforeLastCompact?: boolean;
 }
 
 export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise<string> {
@@ -63,7 +64,29 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
   let emittedIdx = 0;
   const body: string[] = [];
 
+  // --before-last-compact: two-pass. First scan to find the byte position of
+  // the last compact_boundary; second pass stops the render at that line.
+  // We use line index rather than byte offset since we stream.
+  let lastCompactIdx: number | null = null;
+  if (opts.beforeLastCompact) {
+    let idx = 0;
+    for await (const { line } of streamJsonl(ref.path)) {
+      if ((line as any).type === "system" && (line as any).subtype === "compact_boundary") {
+        lastCompactIdx = idx;
+      }
+      idx++;
+    }
+    if (lastCompactIdx == null) {
+      // No compaction in this session — clear message and exit. Don't
+      // silently render everything.
+      return `# Conversation ${ref.shortId}\n\n_(no compact boundaries found — this session hasn't been compacted)_\n`;
+    }
+  }
+
+  let fileIdx = 0;
   for await (const { line } of streamJsonl(ref.path)) {
+    if (lastCompactIdx != null && fileIdx >= lastCompactIdx) { fileIdx++; break; }
+    fileIdx++;
     if ((line as any).type === "custom-title") {
       const ct = (line as any).customTitle;
       if (typeof ct === "string" && ct.trim()) customTitle = ct.trim();

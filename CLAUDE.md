@@ -29,7 +29,7 @@ Claude Code writes every session to `~/.claude/projects/<encoded-project>/<sessi
 ```
 src/
   cli.ts                # citty-based entry; dispatches subcommands
-  commands/             # one file per subcommand (projects, list, show, find, search, info, tools, stats)
+  commands/             # one file per subcommand (projects, list, show, find, search, info, tools, stats, current)
   parser/
     stream.ts           # streaming line-by-line reader (never buffers whole files)
     types.ts            # discriminated types for every known log-line shape
@@ -37,6 +37,9 @@ src/
   format/
     markdown.ts         # canonical renderer; per-type rendering policy table lives here
     truncate.ts         # line truncation + image-block stripping
+  util/
+    current-session.ts  # three-tier detector for the "current" session keyword
+    dates.ts            # --since/--until parsing
   paths.ts              # ~/.claude/projects resolution; project-name decode (lossy → fs-verified)
 tests/
   fixtures/             # small crafted .jsonl files covering every message type we render
@@ -48,6 +51,9 @@ plugin/
   bin/ccthread          # POSIX dispatcher
   bin/ccthread.cmd      # Windows dispatcher
   bin/.ccthread-version # pinned binary version (bumped in lockstep with plugin.json)
+  hooks/hooks.json      # SessionStart + SessionEnd wiring for the 'current' detector
+  hooks/record-session.sh / .ps1   # writes session id to $CLAUDE_PLUGIN_DATA/sessions/<claude-pid>.json
+  hooks/cleanup-session.sh / .ps1  # removes the file on session end
   skills/ccthread/SKILL.md
 scripts/
   build-all.ts          # cross-compile every target
@@ -131,6 +137,21 @@ Avoid cheating tests to make them pass (weakening assertions, adding skipped cas
 - All 6 targets: `bun run build:all` (produces `dist/ccthread-<version>-<target>/` dirs)
 - CI (`.github/workflows/release.yml`, when added): triggers on `v*` tags. Matrix: macos-latest + ubuntu-latest + windows-latest. Windows runner is **required** because `bun build --compile` can't embed Windows PE metadata when cross-compiling.
 - Version lives in `package.json`. Baked into the binary via `--define CCTHREAD_VERSION='"..."'`. Plugin-side version lives in `plugin/bin/.ccthread-version` (must match). Bump all three together when releasing.
+
+## "Current session" detection
+
+`ccthread current` and the `current` keyword in session ids resolve via three tiers, in order:
+
+1. **`CCTHREAD_SESSION_ID`** env var (explicit override; used by tests and scripting).
+2. **Parent-process argv walk.** Walks `ppid` via `ps -ww -o ppid=,command= -p <pid>` (POSIX) or `Get-CimInstance Win32_Process` (Windows) looking for a `claude` ancestor with `--session-id <uuid>` or `--resume <uuid>`. Covers Stovetop and any explicit-id launch.
+3. **Hook-written file.** The plugin ships a `SessionStart` hook that writes `{session_id,transcript_path,cwd,pid,started_at}` to `$CLAUDE_PLUGIN_DATA/sessions/<claude-pid>.json`. The walker also notes the `claude` ancestor's pid; tier 3 reads that pid's file. Covers bare `claude` when the plugin is installed.
+
+If none of those yield a match, `resolveSession` throws `CurrentSessionUndetectableError` and the CLI exits 3 with a message listing every fallback.
+
+Gotchas worth remembering when changing this:
+- `\b--` doesn't match (both chars are non-word). Use `(?:^|\s)--session-id …` instead.
+- `UUID_RE` is case-insensitive but the character class must be `[0-9a-f]` — stovetop session ids are uppercase and the test suite has a case where the env-var override was accidentally failing the regex.
+- `PPID` inside the `record-session.sh` hook is the claude process's pid (the hook is a direct child of claude).
 
 ## Known gotchas
 

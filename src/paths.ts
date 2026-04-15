@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join, basename, isAbsolute, dirname, resolve } from "node:path";
 import { existsSync, statSync } from "node:fs";
 import { readdir } from "node:fs/promises";
+import { detectCurrentSession } from "./util/current-session.ts";
 
 export function projectsDir(): string {
   return process.env.CCTHREAD_PROJECTS_DIR
@@ -138,6 +139,17 @@ export async function listAllSessions(): Promise<SessionRef[]> {
 export class SessionNotFoundError extends Error {
   constructor(arg: string) { super(`session not found: ${arg}`); }
 }
+export class CurrentSessionUndetectableError extends Error {
+  constructor() {
+    super(
+      `can't detect the current Claude Code session. Try one of:\n`
+      + `  - pass the session id explicitly\n`
+      + `  - use 'last' for the most recently modified session\n`
+      + `  - set CCTHREAD_SESSION_ID=<uuid> in the environment\n`
+      + `  - install the ccthread plugin (adds a SessionStart hook that records the current id)`
+    );
+  }
+}
 export class SessionAmbiguousError extends Error {
   constructor(public arg: string, public matches: SessionRef[]) {
     super(`ambiguous session id: ${arg} (matches ${matches.length})`);
@@ -175,6 +187,19 @@ export async function resolveSession(arg: string, opts: { projectFilter?: string
     if (!candidates.length) throw new SessionNotFoundError(arg);
     candidates.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
     return candidates[0]!;
+  }
+
+  if (arg === "current") {
+    const detected = detectCurrentSession();
+    if (!detected) throw new CurrentSessionUndetectableError();
+    // Prefer the transcript_path if the hook gave us one — it's exact.
+    if (detected.transcriptPath && existsSync(detected.transcriptPath)) {
+      return refFromPath(detected.transcriptPath);
+    }
+    const m = candidates.filter(s => s.sessionId.toLowerCase() === detected.sessionId.toLowerCase());
+    if (m.length === 1) return m[0]!;
+    if (m.length > 1) throw new SessionAmbiguousError(arg, m);
+    throw new SessionNotFoundError(`current (${detected.sessionId.slice(0, 8)})`);
   }
 
   if (UUID_RE.test(arg)) {

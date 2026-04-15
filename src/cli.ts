@@ -8,7 +8,8 @@ import { runSearch } from "./commands/search.ts";
 import { runInfo } from "./commands/info.ts";
 import { runTools } from "./commands/tools.ts";
 import { runStats } from "./commands/stats.ts";
-import { SessionAmbiguousError, SessionNotFoundError, NoProjectsDirError } from "./paths.ts";
+import { runCurrent } from "./commands/current.ts";
+import { SessionAmbiguousError, SessionNotFoundError, NoProjectsDirError, CurrentSessionUndetectableError } from "./paths.ts";
 
 // Version is baked by bun build --define; fall back for `bun run`.
 declare const CCTHREAD_VERSION: string;
@@ -67,6 +68,7 @@ const show = defineCommand({
     "include-sidechains": { type: "boolean", default: false, description: "Inline subagent sidechain messages (hidden by default)." },
     "tool-details": { type: "string", description: "Tool-result rendering: brief (default, 40-line truncation), full (no truncation), or none (hide bodies, show one-line status)." },
     "count-total": { type: "boolean", default: false, description: "Pre-scan to compute total message count (enables accurate 'Page N of M'). Costs one extra read of the file." },
+    "before-last-compact": { type: "boolean", default: false, description: "Only render messages from before the session's most recent /compact. Use with id 'current' to answer 'before we compacted, what did you say?' questions." },
     verbose: { type: "boolean", default: false, description: "Also show hook/progress/attachment noise usually filtered." },
     utc: { type: "boolean", default: false, description: "Format timestamps in UTC instead of local time." },
     plain: { type: "boolean", default: false, description: "Strip emoji + code-fence language hints." },
@@ -82,6 +84,7 @@ const show = defineCommand({
       includeSidechains: args["include-sidechains"],
       toolDetails: args["tool-details"] as any,
       countTotal: args["count-total"],
+      beforeLastCompact: args["before-last-compact"],
       verbose: args.verbose,
       utc: args.utc,
       plain: args.plain,
@@ -128,6 +131,7 @@ const search = defineCommand({
     fields: { type: "string", description: "Comma-separated fields to search within message content (default: text,tool_use,tool_result). Add 'thinking' to include reasoning blocks." },
     sort: { type: "string", description: "Session ordering: recent (default), oldest, or hits." },
     "include-sidechains": { type: "boolean", default: false, description: "Include subagent sidechain messages in the search scope." },
+    "before-last-compact": { type: "boolean", default: false, description: "Restrict the scope to messages that happened before each session's most recent /compact." },
     json: { type: "boolean", default: false, description: "Emit JSON with match metadata + windows." },
     plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
@@ -146,6 +150,7 @@ const search = defineCommand({
       fields: args.fields,
       sort: args.sort as any,
       includeSidechains: args["include-sidechains"],
+      beforeLastCompact: args["before-last-compact"],
       json: args.json,
       plain: args.plain,
     }));
@@ -199,6 +204,17 @@ const stats = defineCommand({
   },
 });
 
+const current = defineCommand({
+  meta: { name: "current", description: "Print the session id of the Claude Code session that invoked this command. Detected via parent-process argv or the plugin's SessionStart hook. Use 'current' as a session id with show/info/search/tools." },
+  args: {
+    json: { type: "boolean", default: false, description: "Emit structured JSON." },
+    plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
+  },
+  async run({ args }) {
+    process.stdout.write(await runCurrent({ json: args.json, plain: args.plain }));
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "ccthread",
@@ -213,7 +229,7 @@ const main = defineCommand({
     if (args.strict) process.env.CCTHREAD_STRICT = "1";
     if (args.silent) process.env.CCTHREAD_SILENT = "1";
   },
-  subCommands: { projects, list, show, find, search, info, tools, stats },
+  subCommands: { projects, list, show, find, search, info, tools, stats, current },
 });
 
 // Handle --help / -h / --version explicitly since citty's runCommand won't
@@ -263,6 +279,10 @@ try {
   if (err instanceof NoProjectsDirError) {
     process.stderr.write(`${err.message}\n`);
     process.exit(1);
+  }
+  if (err instanceof CurrentSessionUndetectableError) {
+    process.stderr.write(`ccthread: ${err.message}\n`);
+    process.exit(3);
   }
   // Missing required positional or unknown argument from citty → exit 2
   // (usage error, per sysexits.h EX_USAGE=64 in spirit).

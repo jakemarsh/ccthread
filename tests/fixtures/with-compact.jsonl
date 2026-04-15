@@ -1,0 +1,5 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"s-c","timestamp":"2026-04-15T10:00:00.000Z","message":{"role":"user","content":"what was the magic constant"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"s-c","timestamp":"2026-04-15T10:00:01.000Z","message":{"id":"m1","role":"assistant","model":"claude-opus-4-6","content":[{"type":"text","text":"the magic constant is 42"}],"usage":{"input_tokens":5,"output_tokens":8}}}
+{"type":"system","subtype":"compact_boundary","level":"info","uuid":"sys1","parentUuid":"a1","sessionId":"s-c","timestamp":"2026-04-15T10:00:02.000Z"}
+{"type":"user","uuid":"u2","parentUuid":"sys1","sessionId":"s-c","timestamp":"2026-04-15T10:00:03.000Z","message":{"role":"user","content":"now what"}}
+{"type":"assistant","uuid":"a2","parentUuid":"u2","sessionId":"s-c","timestamp":"2026-04-15T10:00:04.000Z","message":{"id":"m2","role":"assistant","model":"claude-opus-4-6","content":[{"type":"text","text":"post-compact reply, magic constant is not mentioned here"}],"usage":{"input_tokens":5,"output_tokens":8}}}
