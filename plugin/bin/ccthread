@@ -51,7 +51,12 @@ if [ ! -x "$BIN" ]; then
     fi
   fi
   tar -xzf "$TMP/ccthread.tar.gz" -C "$TMP"
-  mv "$TMP"/*/"$EXE" "$BIN"
+  FOUND=$(find "$TMP" -type f -name "$EXE" -perm -u+x 2>/dev/null | head -n1)
+  if [ -z "$FOUND" ]; then
+    echo "ccthread: couldn't find $EXE in the downloaded archive" >&2
+    exit 1
+  fi
+  mv "$FOUND" "$BIN"
   chmod +x "$BIN"
 fi
 
