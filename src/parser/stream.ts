@@ -33,17 +33,26 @@ export async function* streamJsonl(
   const reader = stream.pipeThrough(new TextDecoderStream()).getReader();
   let buf = "";
   let lineNumber = 0;
+  let firstChunk = true;
 
   while (true) {
     const { value, done } = await reader.read();
     if (done) break;
     buf += value;
+    // Strip UTF-8 BOM if the file starts with one. Some editors / exports
+    // leave it in; JSON.parse chokes on the first line otherwise.
+    if (firstChunk) {
+      if (buf.charCodeAt(0) === 0xfeff) buf = buf.slice(1);
+      firstChunk = false;
+    }
 
     let nl: number;
     while ((nl = buf.indexOf("\n")) >= 0) {
-      const raw = buf.slice(0, nl);
+      let raw = buf.slice(0, nl);
       buf = buf.slice(nl + 1);
       lineNumber++;
+      // Handle CRLF line endings (files written on Windows).
+      if (raw.charCodeAt(raw.length - 1) === 0x0d) raw = raw.slice(0, -1);
       if (!raw.trim()) continue;
       try {
         const line = JSON.parse(raw) as LogLine;
@@ -71,8 +80,8 @@ export async function* streamJsonl(
         lineNumber,
         message: `invalid json (trailing): ${(err as Error).message}`,
       };
-      if (opts.strict) throw Object.assign(new Error(issue.message), issue);
-      opts.onIssue?.(issue);
+      if (strict) throw Object.assign(new Error(issue.message), issue);
+      onIssue(issue);
     }
   }
 }

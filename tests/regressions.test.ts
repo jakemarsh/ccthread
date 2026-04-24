@@ -389,6 +389,62 @@ describe("regressions (cli)", () => {
   });
 });
 
+describe("stream parser — edge cases", () => {
+  // Bug: files that start with a UTF-8 BOM crashed on the first line
+  // with "Unexpected token ï". Some exports/editors leave it in.
+  test("strips UTF-8 BOM from the first chunk", async () => {
+    const path = join(TMP, "bom.jsonl");
+    const bom = Buffer.from([0xef, 0xbb, 0xbf]);
+    const body = Buffer.from(`{"type":"user","message":{"content":"hi"}}\n`);
+    writeFileSync(path, Buffer.concat([bom, body]));
+    const lines = await readAllLines(path);
+    expect(lines.length).toBe(1);
+    expect((lines[0] as any).type).toBe("user");
+  });
+
+  // Bug: Windows-generated .jsonl files have CRLF line endings; the
+  // trailing \r wasn't stripped, leaking into raw strings used by search.
+  test("strips trailing \\r from CRLF line endings", async () => {
+    const path = join(TMP, "crlf.jsonl");
+    writeFileSync(path, `{"type":"user","message":{"content":"a"}}\r\n{"type":"user","message":{"content":"b"}}\r\n`);
+    const collected: string[] = [];
+    for await (const { raw } of streamJsonl(path)) collected.push(raw);
+    expect(collected.length).toBe(2);
+    for (const r of collected) expect(r.endsWith("\r")).toBe(false);
+  });
+
+  // Bug: trailing malformed lines bypassed the default issue handler AND
+  // ignored CCTHREAD_STRICT. Only opts.strict / opts.onIssue were honored.
+  test("trailing malformed line respects CCTHREAD_STRICT env var", async () => {
+    const path = join(TMP, "trailing-bad.jsonl");
+    writeFileSync(path, `{"type":"user","message":{"content":"ok"}}\n{not-json`);
+    const prev = process.env.CCTHREAD_STRICT;
+    process.env.CCTHREAD_STRICT = "1";
+    try {
+      let caught: unknown = null;
+      try {
+        for await (const _ of streamJsonl(path)) { /* consume */ }
+      } catch (e) { caught = e; }
+      expect(caught).toBeInstanceOf(Error);
+      expect((caught as Error).message).toContain("trailing");
+    } finally {
+      if (prev === undefined) delete process.env.CCTHREAD_STRICT;
+      else process.env.CCTHREAD_STRICT = prev;
+    }
+  });
+
+  test("trailing malformed line routes to default issue handler (not opts.onIssue)", async () => {
+    const path = join(TMP, "trailing-bad2.jsonl");
+    writeFileSync(path, `{"type":"user","message":{"content":"ok"}}\n{broken`);
+    const issues: { lineNumber: number; message: string }[] = [];
+    for await (const _ of streamJsonl(path, {
+      onIssue: (i) => issues.push({ lineNumber: i.lineNumber, message: i.message }),
+    })) { /* consume */ }
+    expect(issues.length).toBe(1);
+    expect(issues[0]!.message).toContain("trailing");
+  });
+});
+
 describe("plugin manifest — platform-gated hooks", () => {
   // Caught once where hooks.json registered sh AND powershell for every
   // platform, which meant every session start logged a hook-failure notice
