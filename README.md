@@ -263,9 +263,11 @@ Shows: session count, messages, total duration, role counts, token totals (with 
 | `--version`, `-v` | Print version. |
 | `--strict` | Exit on malformed JSON lines instead of warn + continue. |
 | `--silent` | Suppress stderr warnings. |
+| `--no-color` | Strip emoji from output. Keeps the rest of the markdown formatting (use `--plain` if you want code fences stripped too). |
 | `CCTHREAD_PROJECTS_DIR` | Override projects directory (default `~/.claude/projects`). |
 | `CCTHREAD_STRICT=1` | Same as `--strict`. |
 | `CCTHREAD_SILENT=1` | Same as `--silent`. |
+| `NO_COLOR` | Same as `--no-color` ([no-color.org](https://no-color.org)). |
 
 Exit codes: `0` ok, `1` runtime error, `2` bad args, `3` session/project not found, `4` ambiguous session id.
 
@@ -286,7 +288,7 @@ Ambiguous prefix → exit 4 with a list of candidates.
 
 `ccthread` reads `~/.claude/projects/<encoded-project>/<uuid>.jsonl` files and streams them line-by-line. It never loads whole files, because some are 100+ MB. That means:
 
-- `show` returns page 1 in ~80 ms even on a 56 MB file.
+- `show` returns page 1 in ~80 ms even on a 64 MB file.
 - `find` across 11,000+ sessions finishes in ~0.4 s.
 - Memory stays roughly constant regardless of file size.
 

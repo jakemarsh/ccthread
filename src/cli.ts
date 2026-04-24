@@ -59,7 +59,7 @@ const list = defineCommand({
 const show = defineCommand({
   meta: { name: "show", description: "Print one conversation as clean, paginated markdown." },
   args: {
-    id: { type: "positional", required: true, description: "Session id (8+ hex prefix or full UUID), .jsonl path, or the literal 'last'." },
+    id: { type: "positional", required: true, description: "Session id (6+ hex prefix or full UUID), .jsonl path, 'last', or 'current'." },
     page: { type: "string", description: "1-indexed page to render (default 1)." },
     "per-page": { type: "string", description: "Messages per page (default 50)." },
     from: { type: "string", description: "Render messages starting at this 0-indexed position (alternative to --page)." },
@@ -160,7 +160,7 @@ const search = defineCommand({
 const info = defineCommand({
   meta: { name: "info", description: "Show metadata for one conversation: project, cwd, git branch, models, duration, message counts by type, token totals, tool calls, sidechain/interrupted/api-error/compact-boundary counts." },
   args: {
-    id: { type: "positional", required: true, description: "Session id (8+ hex prefix or full UUID), .jsonl path, or 'last'." },
+    id: { type: "positional", required: true, description: "Session id (6+ hex prefix or full UUID), .jsonl path, 'last', or 'current'." },
     json: { type: "boolean", default: false, description: "Emit structured JSON." },
     plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
   },
@@ -172,7 +172,7 @@ const info = defineCommand({
 const tools = defineCommand({
   meta: { name: "tools", description: "Tool-usage breakdown for one conversation (Bash, Read, Edit, etc.) with call counts + percentages." },
   args: {
-    id: { type: "positional", required: true, description: "Session id, path, or 'last'." },
+    id: { type: "positional", required: true, description: "Session id (6+ hex prefix or full UUID), .jsonl path, 'last', or 'current'." },
     top: { type: "string", description: "Show only the top N tools by calls (default 20)." },
     json: { type: "boolean", default: false, description: "Emit structured JSON." },
     plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
@@ -205,7 +205,7 @@ const stats = defineCommand({
 });
 
 const current = defineCommand({
-  meta: { name: "current", description: "Print the session id of the Claude Code session that invoked this command. Detected via parent-process argv or the plugin's SessionStart hook. Use 'current' as a session id with show/info/search/tools." },
+  meta: { name: "current", description: "Print the session id of the Claude Code session that invoked this command. Detected via CCTHREAD_SESSION_ID env var, ancestor argv (--session-id / --resume), or the plugin's SessionStart hook file — in that order. Use 'current' as a session id with show/info/search/tools." },
   args: {
     json: { type: "boolean", default: false, description: "Emit structured JSON." },
     plain: { type: "boolean", default: false, description: "Strip markdown formatting." },
