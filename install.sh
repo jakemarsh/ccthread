@@ -53,7 +53,15 @@ else
   exit 1
 fi
 
-mv "$TMP"/*/ccthread "$DEST/ccthread"
+# Locate the binary explicitly — the release tarball wraps it in a
+# version-stamped dir today but that shape could change, and a glob like
+# "$TMP"/*/ccthread silently breaks if it ever does.
+BIN=$(find "$TMP" -type f -name ccthread -perm -u+x 2>/dev/null | head -n1)
+if [ -z "$BIN" ] || [ ! -f "$BIN" ]; then
+  echo "ccthread: couldn't find the ccthread binary in the downloaded archive" >&2
+  exit 1
+fi
+mv "$BIN" "$DEST/ccthread"
 chmod +x "$DEST/ccthread"
 
 echo "Installed to $DEST/ccthread"
