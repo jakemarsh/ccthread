@@ -34,7 +34,7 @@ Use this if you want Claude Code to call `ccthread` automatically when you ask a
 
 ```
 /plugin marketplace add jakemarsh/ccthread
-/plugin install ccthread@jakemarsh
+/plugin install ccthread@ccthread
 ```
 
 The repo doubles as its own marketplace. `add` registers it; `install` activates the skill. The first time Claude invokes `ccthread`, the plugin's dispatcher downloads the matching binary for your platform and caches it under `~/.claude/plugins/data/ccthread/`. No other setup needed.
