@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/github-hero.png" alt="ccthread" />
+</p>
+
 # ccthread
 
 Read, search, and have Claude summarize your Claude Code conversation logs from the CLI.
