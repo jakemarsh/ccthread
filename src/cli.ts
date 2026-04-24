@@ -224,10 +224,12 @@ const main = defineCommand({
   args: {
     strict: { type: "boolean", default: false, description: "Fail fast on malformed JSON lines (default: warn + continue)." },
     silent: { type: "boolean", default: false, description: "Suppress stderr warnings about malformed lines." },
+    "no-color": { type: "boolean", default: false, description: "Strip emoji from output. Also triggered by the NO_COLOR env var (https://no-color.org)." },
   },
   setup({ args }) {
     if (args.strict) process.env.CCTHREAD_STRICT = "1";
     if (args.silent) process.env.CCTHREAD_SILENT = "1";
+    if (args["no-color"] || process.env.NO_COLOR) process.env.CCTHREAD_NO_COLOR = "1";
   },
   subCommands: { projects, list, show, find, search, info, tools, stats, current },
 });

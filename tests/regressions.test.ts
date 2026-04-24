@@ -464,6 +464,30 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("CCTHREAD_NO_COLOR — strip emoji without flipping --plain", () => {
+  // Was: the only way to drop emoji was --plain, which also strips code-fence
+  // language hints and other formatting. Users piping to loggers / non-Unicode
+  // terminals wanted a strict emoji-only toggle.
+  test("sets CCTHREAD_NO_COLOR=1 → no emoji in show output", async () => {
+    // Use an existing fixture path directly (resolveSession accepts paths).
+    const path = join(FX, "minimal.jsonl");
+
+    const prev = process.env.CCTHREAD_NO_COLOR;
+    process.env.CCTHREAD_NO_COLOR = "1";
+    try {
+      const out = await runShow(path);
+      // Emoji characters in the GLYPH table should not show up. Sample
+      // a few known ones used in headers.
+      for (const g of ["👤", "🤖", "🧩", "⚠️", "⚙️", "⏰", "🔗"]) {
+        expect(out).not.toContain(g);
+      }
+    } finally {
+      if (prev === undefined) delete process.env.CCTHREAD_NO_COLOR;
+      else process.env.CCTHREAD_NO_COLOR = prev;
+    }
+  });
+});
+
 describe("list --sort size — size column", () => {
   // Was: --sort size changed the row order but nothing in the output showed
   // which session was biggest. Now the size column only shows when the sort

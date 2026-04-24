@@ -42,7 +42,11 @@ const GLYPH = {
 } as const;
 
 function emoji(name: keyof typeof GLYPH, opts: RenderOptions): string {
-  return opts.plain ? "" : GLYPH[name];
+  // --plain, --no-color, and the NO_COLOR env var (https://no-color.org)
+  // all strip emoji. --plain additionally drops code-fence language hints.
+  if (opts.plain) return "";
+  if (process.env.CCTHREAD_NO_COLOR) return "";
+  return GLYPH[name];
 }
 
 // A stage in the document: any single rendered block we append to the output.
