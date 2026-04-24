@@ -277,7 +277,7 @@ try {
     process.exit(3);
   }
   if (err instanceof NoProjectsDirError) {
-    process.stderr.write(`${err.message}\n`);
+    process.stderr.write(`ccthread: ${err.message}\n`);
     process.exit(1);
   }
   if (err instanceof CurrentSessionUndetectableError) {
@@ -291,7 +291,6 @@ try {
       || /Unknown (?:command|argument|option)/i.test(msg)
       || /Invalid regular expression/i.test(msg)
       || /invalid --/i.test(msg)
-      || /^(list|show|search|stats|find|info|tools)(?: --\w+)?(?: ")? (?:invalid|.*is not a valid date)/i.test(msg)
       || /is not a valid date/i.test(msg)
       || /must be >=/.test(msg)) {
     process.stderr.write(`ccthread: ${msg}\n`);

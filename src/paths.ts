@@ -11,7 +11,7 @@ export function projectsDir(): string {
 
 export class NoProjectsDirError extends Error {
   constructor(public dir: string) {
-    super(`ccthread: no Claude Code projects dir found at ${dir}. Set CCTHREAD_PROJECTS_DIR=... or install Claude Code.`);
+    super(`no Claude Code projects dir found at ${dir}. Set CCTHREAD_PROJECTS_DIR=... or install Claude Code.`);
   }
 }
 
@@ -137,7 +137,9 @@ export async function listAllSessions(): Promise<SessionRef[]> {
 }
 
 export class SessionNotFoundError extends Error {
-  constructor(arg: string) { super(`session not found: ${arg}`); }
+  constructor(arg: string) {
+    super(`session not found: ${arg}\n  try: ccthread list`);
+  }
 }
 export class CurrentSessionUndetectableError extends Error {
   constructor() {

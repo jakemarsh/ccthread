@@ -85,7 +85,7 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
 
   let fileIdx = 0;
   for await (const { line } of streamJsonl(ref.path)) {
-    if (lastCompactIdx != null && fileIdx >= lastCompactIdx) { fileIdx++; break; }
+    if (lastCompactIdx != null && fileIdx >= lastCompactIdx) break;
     fileIdx++;
     if ((line as any).type === "custom-title") {
       const ct = (line as any).customTitle;

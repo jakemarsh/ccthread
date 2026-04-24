@@ -38,6 +38,25 @@ describe("regressions", () => {
     expect(caught).toBeInstanceOf(SessionNotFoundError);
   });
 
+  // Was: "session not found: <arg>" with no pointer. Hint makes the error
+  // actionable without a re-ask.
+  test("SessionNotFoundError message points at ccthread list", () => {
+    const err = new SessionNotFoundError("abc123");
+    expect(err.message).toContain("session not found: abc123");
+    expect(err.message).toContain("ccthread list");
+  });
+
+  // Was: NoProjectsDirError.message included "ccthread:" AND cli.ts:280
+  // wrote it without prefix — but any code path that fell through to the
+  // generic handler on line 300 would double-prefix. Moving the prefix to
+  // a single source (cli.ts) fixes both ends.
+  test("NoProjectsDirError message doesn't embed its own 'ccthread:' prefix", async () => {
+    const { NoProjectsDirError } = await import("../src/paths.ts");
+    const err = new NoProjectsDirError("/nope");
+    expect(err.message.startsWith("ccthread:")).toBe(false);
+    expect(err.message).toContain("/nope");
+  });
+
   // Bug: the "ai-title" line type was unknown to the parser, so titles from it
   // never reached list/find/info/show.
   test("ai-title feeds title in list, info, show, find when no custom-title", async () => {
