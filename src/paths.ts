@@ -28,8 +28,19 @@ export function ensureProjectsDir(): string {
 // greedily consuming the longest prefix of remaining parts that matches a
 // real directory on disk. Falls back to the naive all-dashes-to-slashes
 // decode if the filesystem doesn't help.
+//
+// Each call can issue O(parts²) existsSync probes; users with thousands of
+// projects paid that cost on every `ccthread list` / `projects`. Memoize
+// for the life of the process.
+const decodeCache = new Map<string, string>();
+
+export function _resetDecodeCache() { decodeCache.clear(); }
+
 export function decodeProjectName(encoded: string): string {
   if (!encoded.startsWith("-")) return encoded;
+  const cached = decodeCache.get(encoded);
+  if (cached !== undefined) return cached;
+
   const parts = encoded.slice(1).split("-");
   let cur = "/";
   let i = 0;
@@ -43,10 +54,13 @@ export function decodeProjectName(encoded: string): string {
     if (found < 0) {
       // No match from here on — append remaining parts joined by "/" (naive).
       const tail = parts.slice(i).join("/");
-      return cur === "/" ? "/" + tail : join(cur, tail);
+      const out = cur === "/" ? "/" + tail : join(cur, tail);
+      decodeCache.set(encoded, out);
+      return out;
     }
     i += found;
   }
+  decodeCache.set(encoded, cur);
   return cur;
 }
 

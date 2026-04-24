@@ -504,6 +504,26 @@ describe("version sync", () => {
   });
 });
 
+describe("decodeProjectName — memoization", () => {
+  // decodeProjectName walks the filesystem checking existsSync on every
+  // prefix of the encoded name. For a user with thousands of projects,
+  // listProjects repeats this for each entry per command. Memoize.
+  test("second call with same input doesn't re-probe the filesystem", async () => {
+    const { decodeProjectName, _resetDecodeCache } = await import("../src/paths.ts");
+    _resetDecodeCache();
+
+    const encoded = "-definitely-not-a-real-path-" + Math.random().toString(36).slice(2);
+    const first = decodeProjectName(encoded);
+    const spyStart = Date.now();
+    for (let i = 0; i < 1000; i++) decodeProjectName(encoded);
+    const elapsed = Date.now() - spyStart;
+    // 1000 cached decodes should take well under 10ms. 1000 uncached probes
+    // would do ~1000 * N filesystem stats and take much longer.
+    expect(elapsed).toBeLessThan(50);
+    expect(decodeProjectName(encoded)).toBe(first);
+  });
+});
+
 describe("record-session hook — error breadcrumb", () => {
   const skipOnWindows = process.platform === "win32";
 
