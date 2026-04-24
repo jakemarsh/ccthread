@@ -8,23 +8,38 @@ permissions:
   contents: write
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          sudo apt-get install -y shellcheck
+          shellcheck install.sh plugin/bin/ccthread plugin/hooks/record-session.sh plugin/hooks/cleanup-session.sh
+
   build:
+    needs: lint
     strategy:
       fail-fast: false
       matrix:
         include:
           - runner: macos-latest
             targets: "bun-darwin-arm64 bun-darwin-x64-baseline"
+            smoke_target: "bun-darwin-arm64"
           - runner: ubuntu-latest
             targets: "bun-linux-x64-baseline bun-linux-arm64"
+            smoke_target: "bun-linux-x64-baseline"
           - runner: windows-latest
             targets: "bun-windows-x64-baseline bun-windows-arm64"
+            smoke_target: "bun-windows-x64-baseline"
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun test
+      - name: Check version sync
+        run: bun scripts/check-versions.ts
       - name: Build targets
         shell: bash
         run: |
@@ -40,6 +55,20 @@ jobs:
             (cd dist && tar -czf "ccthread-v${VERSION}-${target}.tar.gz" "ccthread-${VERSION}-${target}")
             (cd dist && shasum -a 256 "ccthread-v${VERSION}-${target}.tar.gz" > "ccthread-v${VERSION}-${target}.tar.gz.sha256" || sha256sum "ccthread-v${VERSION}-${target}.tar.gz" > "ccthread-v${VERSION}-${target}.tar.gz.sha256")
           done
+      - name: Smoke test native binary
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TARGET="${{ matrix.smoke_target }}"
+          exe="ccthread"
+          case "$TARGET" in bun-windows-*) exe="ccthread.exe" ;; esac
+          bin="dist/ccthread-${VERSION}-${TARGET}/${exe}"
+          # Extract from the tarball to make sure packaging works, then
+          # run --version to make sure the binary itself isn't DOA.
+          smoke_dir="$(mktemp -d)"
+          tar -xzf "dist/ccthread-v${VERSION}-${TARGET}.tar.gz" -C "$smoke_dir"
+          extracted_bin=$(find "$smoke_dir" -type f -name "$exe" | head -n1)
+          "$extracted_bin" --version
       - uses: actions/upload-artifact@v4
         with:
           name: ccthread-${{ matrix.runner }}
