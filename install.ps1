@@ -3,7 +3,15 @@ $ErrorActionPreference = "Stop"
 $Repo = "jakemarsh/ccthread"
 $Version = if ($env:CCTHREAD_VERSION) { $env:CCTHREAD_VERSION } else { "latest" }
 
-$arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "bun-windows-arm64" } else { "bun-windows-x64-baseline" }
+# PROCESSOR_ARCHITECTURE reports the arch of the *current process*, so a
+# 32-bit PowerShell on a 64-bit host reads "x86". PROCESSOR_ARCHITEW6432
+# carries the host arch in that case; fall back to it if the primary var
+# is missing or x86.
+$rawArch = $env:PROCESSOR_ARCHITECTURE
+if ([string]::IsNullOrEmpty($rawArch) -or $rawArch -eq 'x86') {
+  if (-not [string]::IsNullOrEmpty($env:PROCESSOR_ARCHITEW6432)) { $rawArch = $env:PROCESSOR_ARCHITEW6432 }
+}
+$arch = if ($rawArch -eq "ARM64") { "bun-windows-arm64" } else { "bun-windows-x64-baseline" }
 
 if ($Version -eq "latest") {
   $latest = Invoke-RestMethod -UseBasicParsing -Uri "https://api.github.com/repos/$Repo/releases/latest"

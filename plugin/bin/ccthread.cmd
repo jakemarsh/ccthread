@@ -9,7 +9,13 @@ if "%DATA%"=="" set "DATA=%LOCALAPPDATA%\claude\plugins\ccthread"
 
 set /p VERSION=<"%ROOT%\bin\.ccthread-version"
 
-if /I "%PROCESSOR_ARCHITECTURE%"=="ARM64" (set "TARGET=bun-windows-arm64") else (set "TARGET=bun-windows-x64-baseline")
+rem PROCESSOR_ARCHITECTURE reports the current process's arch; a 32-bit
+rem host reads "x86". PROCESSOR_ARCHITEW6432 carries the machine arch
+rem in that case.
+set "RAW_ARCH=%PROCESSOR_ARCHITECTURE%"
+if "%RAW_ARCH%"=="" set "RAW_ARCH=%PROCESSOR_ARCHITEW6432%"
+if /I "%RAW_ARCH%"=="x86" if not "%PROCESSOR_ARCHITEW6432%"=="" set "RAW_ARCH=%PROCESSOR_ARCHITEW6432%"
+if /I "%RAW_ARCH%"=="ARM64" (set "TARGET=bun-windows-arm64") else (set "TARGET=bun-windows-x64-baseline")
 
 set "BINDIR=%DATA%\bin\ccthread-%VERSION%-%TARGET%"
 set "BIN=%BINDIR%\ccthread.exe"
