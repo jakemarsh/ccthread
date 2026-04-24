@@ -1,6 +1,11 @@
 #!/bin/sh
-# ccthread SessionEnd hook — removes the PID-keyed session file written by
-# the SessionStart hook. Best-effort; failures are silent.
+# ccthread SessionEnd hook — removes the session file written by the
+# SessionStart hook. Best-effort; failures are silent.
+#
+# Matches primarily on session_id from the hook payload, falls back to
+# the pid-based filename if the payload's missing a session_id. The
+# payload match keeps cleanup correct even in edge cases where $PPID
+# isn't what record-session.sh saw (pid reuse, etc.).
 
 # Skip on Windows-like shells; PowerShell sibling handles those.
 case "$(uname -s 2>/dev/null)" in
@@ -8,5 +13,20 @@ case "$(uname -s 2>/dev/null)" in
 esac
 
 DATA="${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/ccthread}"
-rm -f "$DATA/sessions/$PPID.json" 2>/dev/null || true
+SESSIONS="$DATA/sessions"
+[ -d "$SESSIONS" ] || exit 0
+
+input=$(cat 2>/dev/null || true)
+session_id=$(printf '%s' "$input" | sed -n "s/.*\"session_id\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" | head -n1)
+
+if [ -n "$session_id" ]; then
+  for f in "$SESSIONS"/*.json; do
+    [ -f "$f" ] || continue
+    if grep -q "\"session_id\":\"$session_id\"" "$f" 2>/dev/null; then
+      rm -f "$f" 2>/dev/null || true
+    fi
+  done
+fi
+
+rm -f "$SESSIONS/$PPID.json" 2>/dev/null || true
 exit 0

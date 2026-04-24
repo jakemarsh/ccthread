@@ -445,6 +445,42 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("cleanup-session hook — payload-driven delete", () => {
+  // Guard: shell scripts only run on POSIX. Skip on Windows.
+  const skipOnWindows = process.platform === "win32";
+
+  test.skipIf(skipOnWindows)("deletes the file matching session_id from payload, leaves others", async () => {
+    const hookDir = join(import.meta.dir, "..", "plugin", "hooks");
+    const sessionsHome = mkdtempSync(join(tmpdir(), "ccthread-cleanup-"));
+    const sessionsDir = join(sessionsHome, "sessions");
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(sessionsDir, { recursive: true });
+
+    const matchPid = "11111";
+    const otherPid = "22222";
+    const matchId = "deadbeef-dead-beef-dead-beefdeadbeef";
+    const otherId = "cafef00d-cafe-f00d-cafe-f00dcafef00d";
+    writeFileSync(join(sessionsDir, `${matchPid}.json`),
+      `{"session_id":"${matchId}","transcript_path":"/x","cwd":"/","pid":${matchPid},"started_at":0}`);
+    writeFileSync(join(sessionsDir, `${otherPid}.json`),
+      `{"session_id":"${otherId}","transcript_path":"/y","cwd":"/","pid":${otherPid},"started_at":0}`);
+
+    const payload = JSON.stringify({ session_id: matchId });
+    const proc = Bun.spawnSync({
+      cmd: ["sh", join(hookDir, "cleanup-session.sh")],
+      stdin: new TextEncoder().encode(payload),
+      env: { ...process.env, CLAUDE_PLUGIN_DATA: sessionsHome },
+    });
+    expect(proc.exitCode).toBe(0);
+
+    const { existsSync } = await import("node:fs");
+    expect(existsSync(join(sessionsDir, `${matchPid}.json`))).toBe(false);
+    expect(existsSync(join(sessionsDir, `${otherPid}.json`))).toBe(true);
+
+    rmSync(sessionsHome, { recursive: true, force: true });
+  });
+});
+
 describe("plugin manifest — platform-gated hooks", () => {
   // Caught once where hooks.json registered sh AND powershell for every
   // platform, which meant every session start logged a hook-failure notice
