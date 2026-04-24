@@ -209,7 +209,11 @@ export async function resolveSession(arg: string, opts: { projectFilter?: string
     const detected = detectCurrentSession();
     if (!detected) throw new CurrentSessionUndetectableError();
     // Prefer the transcript_path if the hook gave us one — it's exact.
-    if (detected.transcriptPath && existsSync(detected.transcriptPath)) {
+    // Validate that it exists AND lives under the projects dir, so a
+    // stale / tampered path can't silently redirect us somewhere else.
+    if (detected.transcriptPath
+        && existsSync(detected.transcriptPath)
+        && isUnderProjectsDir(detected.transcriptPath)) {
       return refFromPath(detected.transcriptPath);
     }
     const m = candidates.filter(s => s.sessionId.toLowerCase() === detected.sessionId.toLowerCase());
@@ -264,4 +268,17 @@ function refFromPath(path: string): SessionRef {
 
 export function isAbsoluteOrRelative(s: string): boolean {
   return s.startsWith("/") || s.startsWith("./") || s.startsWith("../") || s.startsWith("~") || isAbsolute(s);
+}
+
+export function _isUnderProjectsDir(candidate: string): boolean { return isUnderProjectsDir(candidate); }
+
+function isUnderProjectsDir(candidate: string): boolean {
+  // Accept any .jsonl that sits under the configured projects dir. Resolve
+  // both sides to absolute paths so a tilde / relative transcript_path
+  // can't sneak past the prefix check.
+  try {
+    const base = resolve(projectsDir());
+    const full = resolve(candidate);
+    return full === base || full.startsWith(base + "/") || full.startsWith(base + "\\");
+  } catch { return false; }
 }

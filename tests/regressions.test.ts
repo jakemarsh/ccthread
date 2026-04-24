@@ -504,6 +504,19 @@ describe("version sync", () => {
   });
 });
 
+describe("current-session — transcript path sandbox", () => {
+  // Bug-shape: `ccthread show current` trusted hook-written transcript_path
+  // without checking it was under projectsDir. A stale or tampered path
+  // could redirect rendering somewhere unrelated.
+  test("isUnderProjectsDir rejects paths outside CCTHREAD_PROJECTS_DIR", async () => {
+    const { _isUnderProjectsDir } = await import("../src/paths.ts");
+    // TMP is set as CCTHREAD_PROJECTS_DIR by the beforeAll above.
+    expect(_isUnderProjectsDir(join(TMP, "some-session.jsonl"))).toBe(true);
+    expect(_isUnderProjectsDir("/etc/passwd")).toBe(false);
+    expect(_isUnderProjectsDir("/tmp/elsewhere/session.jsonl")).toBe(false);
+  });
+});
+
 describe("decodeProjectName — memoization", () => {
   // decodeProjectName walks the filesystem checking existsSync on every
   // prefix of the encoded name. For a user with thousands of projects,
