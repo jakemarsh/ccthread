@@ -464,6 +464,20 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("show --before-last-compact + --count-total — one pre-scan pass", () => {
+  // Was: two independent pre-scans (one for totals, one for the last
+  // compact index) + the render pass meant three full reads when both
+  // flags were set. Now one pre-scan does both.
+  test("renders correctly when both flags are set", async () => {
+    const path = join(FX, "with-compact.jsonl");
+    const out = await runShow(path, { beforeLastCompact: true, countTotal: true });
+    // Should still end up rendering the pre-compact slice with an accurate
+    // "Page N of M" footer enabled by --count-total.
+    expect(out).toContain("Page");
+    expect(out).toContain("of ");
+  });
+});
+
 describe("CCTHREAD_NO_COLOR — strip emoji without flipping --plain", () => {
   // Was: the only way to drop emoji was --plain, which also strips code-fence
   // language hints and other formatting. Users piping to loggers / non-Unicode

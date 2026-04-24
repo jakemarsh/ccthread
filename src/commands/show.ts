@@ -43,14 +43,30 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
   if (fromIdx < 0) throw new Error(`show: --from must be >= 0 (got ${fromIdx})`);
   if (toIdx < fromIdx) throw new Error(`show: --to (${toIdx}) must be >= --from (${fromIdx})`);
 
-  // Two modes: if --count-total, stream once to collect total message count,
-  // then again to render the requested slice. Otherwise, render on the fly
-  // until we've emitted enough messages for the page.
+  // Pre-scan pass — only runs when --count-total or --before-last-compact
+  // needs it. We fold both into a single pass so `--count-total
+  // --before-last-compact` stays at two file reads total, not three.
   let totalRendered = 0;
-  if (opts.countTotal) {
+  let lastCompactIdx: number | null = null;
+  const needsPreScan = opts.countTotal || opts.beforeLastCompact;
+  if (needsPreScan) {
+    let idx = 0;
     for await (const { line } of streamJsonl(ref.path)) {
-      const r = renderLine(line, { idx: 0, totalRendered: 0, opts: renderOpts });
-      if (r.countsAsMessage) totalRendered++;
+      if (opts.beforeLastCompact
+          && (line as any).type === "system"
+          && (line as any).subtype === "compact_boundary") {
+        lastCompactIdx = idx;
+      }
+      if (opts.countTotal) {
+        const r = renderLine(line, { idx: 0, totalRendered: 0, opts: renderOpts });
+        if (r.countsAsMessage) totalRendered++;
+      }
+      idx++;
+    }
+    if (opts.beforeLastCompact && lastCompactIdx == null) {
+      // No compaction in this session — clear message and exit. Don't
+      // silently render everything.
+      return `# Conversation ${ref.shortId}\n\n_(no compact boundaries found — this session hasn't been compacted)_\n`;
     }
   }
 
@@ -63,25 +79,6 @@ export async function runShow(idOrPath: string, opts: ShowOptions = {}): Promise
   let renderedIdx = 0;
   let emittedIdx = 0;
   const body: string[] = [];
-
-  // --before-last-compact: two-pass. First scan to find the byte position of
-  // the last compact_boundary; second pass stops the render at that line.
-  // We use line index rather than byte offset since we stream.
-  let lastCompactIdx: number | null = null;
-  if (opts.beforeLastCompact) {
-    let idx = 0;
-    for await (const { line } of streamJsonl(ref.path)) {
-      if ((line as any).type === "system" && (line as any).subtype === "compact_boundary") {
-        lastCompactIdx = idx;
-      }
-      idx++;
-    }
-    if (lastCompactIdx == null) {
-      // No compaction in this session — clear message and exit. Don't
-      // silently render everything.
-      return `# Conversation ${ref.shortId}\n\n_(no compact boundaries found — this session hasn't been compacted)_\n`;
-    }
-  }
 
   let fileIdx = 0;
   for await (const { line } of streamJsonl(ref.path)) {
