@@ -504,6 +504,27 @@ describe("version sync", () => {
   });
 });
 
+describe("record-session hook — error breadcrumb", () => {
+  const skipOnWindows = process.platform === "win32";
+
+  test.skipIf(skipOnWindows)("writes .last-error when payload has no session_id", async () => {
+    const hookDir = join(import.meta.dir, "..", "plugin", "hooks");
+    const home = mkdtempSync(join(tmpdir(), "ccthread-hook-error-"));
+    const payload = `{"something_else":"no session_id here"}`;
+    const proc = Bun.spawnSync({
+      cmd: ["sh", join(hookDir, "record-session.sh")],
+      stdin: new TextEncoder().encode(payload),
+      env: { ...process.env, CLAUDE_PLUGIN_DATA: home },
+    });
+    expect(proc.exitCode).toBe(0);
+    const crumb = join(home, "sessions", ".last-error");
+    const { existsSync, readFileSync } = await import("node:fs");
+    expect(existsSync(crumb)).toBe(true);
+    expect(readFileSync(crumb, "utf8")).toContain("no session_id in payload");
+    rmSync(home, { recursive: true, force: true });
+  });
+});
+
 describe("cleanup-session hook — payload-driven delete", () => {
   // Guard: shell scripts only run on POSIX. Skip on Windows.
   const skipOnWindows = process.platform === "win32";

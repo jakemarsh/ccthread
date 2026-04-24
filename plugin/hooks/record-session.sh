@@ -26,11 +26,19 @@ session_id=$(extract session_id)
 transcript_path=$(extract transcript_path)
 cwd=$(extract cwd)
 
-[ -z "$session_id" ] && exit 0  # nothing to record
-
 DATA="${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/ccthread}"
 SESSIONS="$DATA/sessions"
 mkdir -p "$SESSIONS"
+
+# If we got a non-empty payload but no session_id, leave a breadcrumb so
+# this isn't invisible if Claude Code ever changes the payload shape.
+if [ -z "$session_id" ]; then
+  if [ -n "$input" ]; then
+    ts=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)
+    printf '%s record-session.sh: no session_id in payload: %s\n' "$ts" "$(printf '%s' "$input" | head -c 200)" > "$SESSIONS/.last-error" 2>/dev/null || true
+  fi
+  exit 0
+fi
 
 now=$(date +%s 2>/dev/null || echo 0)
 
