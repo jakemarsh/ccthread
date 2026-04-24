@@ -57,7 +57,7 @@ export async function runList(opts: ListOptions = {}): Promise<string> {
   for (const s of sessions) rows.push(await summarize(s));
 
   if (opts.json) return JSON.stringify(rows, null, 2);
-  return renderTable(rows, !!opts.project, !!opts.plain);
+  return renderTable(rows, !!opts.project, !!opts.plain, sort === "size");
 }
 
 async function summarize(s: { shortId: string; sessionId: string; project: { decodedPath: string; basename: string }; path: string; mtime: Date; size: number }): Promise<Row> {
@@ -128,18 +128,26 @@ function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n - 1) + "…";
 }
 
-function renderTable(rows: Row[], scoped: boolean, plain: boolean): string {
+function renderTable(rows: Row[], scoped: boolean, plain: boolean, showSize: boolean): string {
   if (!rows.length) return "(no sessions match)\n";
   const lines: string[] = [];
   if (!plain) lines.push(`# Sessions (${rows.length})\n`);
   for (const r of rows) {
     const date = r.started ? r.started.slice(0, 10) : "????-??-??";
     const dur = r.durationMs ? humanShort(r.durationMs) : "";
-    const head = `- \`${r.shortId}\` · ${date} · ${r.messages} msg${dur ? ` · ${dur}` : ""}${r.model ? ` · ${r.model.replace(/^claude-/, "")}` : ""}${!scoped ? ` · ${r.projectBasename}` : ""}`;
+    const sz = showSize ? ` · ${humanBytes(r.size)}` : "";
+    const head = `- \`${r.shortId}\` · ${date} · ${r.messages} msg${dur ? ` · ${dur}` : ""}${sz}${r.model ? ` · ${r.model.replace(/^claude-/, "")}` : ""}${!scoped ? ` · ${r.projectBasename}` : ""}`;
     lines.push(head);
     if (r.title) lines.push(`    ${r.title}`);
   }
   return lines.join("\n") + "\n";
+}
+
+function humanBytes(n: number): string {
+  if (n < 1024) return `${n}B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)}K`;
+  if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)}M`;
+  return `${(n / (1024 * 1024 * 1024)).toFixed(1)}G`;
 }
 
 function humanShort(ms: number): string {

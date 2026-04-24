@@ -464,6 +464,23 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("list --sort size — size column", () => {
+  // Was: --sort size changed the row order but nothing in the output showed
+  // which session was biggest. Now the size column only shows when the sort
+  // is actually active.
+  test("shows humanized size column only when --sort size is active", async () => {
+    const out1 = await runList({ sort: "size", limit: 5 });
+    const out2 = await runList({ sort: "recent", limit: 5 });
+    // size column uses K/M/G suffixes — one of these should appear in the
+    // size-sorted output (fixtures are small so it'll be bytes).
+    expect(out1).toMatch(/\d+(\.\d)?[BKMG]/);
+    // default sort shouldn't show a size token. Timestamps use -:- and msg
+    // counts end in "msg" so the regex is tight enough.
+    const hasSizeToken = /· \d+(\.\d)?[BKMG] /.test(out2);
+    expect(hasSizeToken).toBe(false);
+  });
+});
+
 describe("search — context truncation", () => {
   // Was: ccthread search window context emitted each context message in
   // full, so a tool_result with 500 lines drowned the match itself.

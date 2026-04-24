@@ -79,7 +79,7 @@ ccthread projects                         # list every project
 ccthread current                          # print the current session's id
 ```
 
-`<id>` can be a UUID prefix (8+ hex chars), a file path, `last` / `latest`, or `current` (the session you're in right now, if ccthread is running inside Claude Code).
+`<id>` can be a UUID prefix (6+ hex chars, 8+ recommended), a file path, `last` / `latest`, or `current` (the session you're in right now, if ccthread is running inside Claude Code).
 
 Every command supports `--json`, `--plain`, and `--help`.
 
@@ -90,35 +90,51 @@ After `/plugin install ccthread`, the bundled skill tells Claude where past conv
 ### Things it's good for
 
 **Recalling decisions and values.**
-"What port did we use for the local Stripe webhook last time?"
+
+> What port did we use for the local Stripe webhook last time?
+
 → `ccthread search "stripe webhook" --window 3` and quotes the relevant messages.
 
 **Finding an old session by topic.**
-"Find the thread where we set up the ACME phone number."
+
+> Find the thread where we set up the ACME phone number.
+
 → `ccthread find "ACME"`, picks the right session, then `ccthread show <id>`.
 
 **Writing a recap for a teammate.**
-"Summarize my work on the checkout refactor this week. Under 200 words."
+
+> Summarize my work on the checkout refactor this week. Under 200 words.
+
 → `ccthread list --project <name> --since <date>` to find the sessions, then `show` on each one, then Claude writes the recap from the rendered transcripts.
 
 **Learning from past mistakes.**
-"Why did we roll back that migration two weeks ago?"
+
+> Why did we roll back that migration two weeks ago?
+
 → `ccthread search "rollback"` + `ccthread info <id>`, reads the transcript around the decision.
 
 **Turning a past process into a skill.**
-"Go look at the long session where we figured out Sparkle deploys and turn it into a skill."
+
+> Go look at the long session where we figured out Sparkle deploys and turn it into a skill.
+
 → `ccthread show <id> --no-thinking --tool-details none`, distills the steps, writes SKILL.md.
 
 **Seeding CLAUDE.md with project knowledge.**
-"Look at my last month of sessions on great-work and pull conventions into CLAUDE.md."
+
+> Look at my last month of sessions on great-work and pull conventions into CLAUDE.md.
+
 → Iterates over `ccthread list` + `ccthread show`, commits new sections.
 
 **Looking up something from the current conversation.**
-"Before we compacted, you said something useful about X — find it."
+
+> Before we compacted, you said something useful about X — find it.
+
 → `ccthread show current --before-last-compact` or `ccthread search "X" --session current --before-last-compact --window 3`. Works because Claude Code writes each session's transcript to disk as it goes, and ccthread can detect which session invoked it (via the parent `claude` process's argv, or the plugin's SessionStart hook for bare `claude` launches).
 
 **Answering questions across many sessions.**
-"How often have I hit Overloaded errors this week?"
+
+> How often have I hit Overloaded errors this week?
+
 → `ccthread stats --since <date>` reports api_errors directly, or `ccthread search "Overloaded"` for per-match detail.
 
 `ccthread` itself is just the reader — the agent does the thinking, reading its output like it would a source file. Everything runs locally; nothing leaves your machine. Files are streamed, so a 100 MB session still returns page 1 in under a second.
@@ -217,6 +233,7 @@ Keyword search with ±N messages of context around each hit. One section per ses
 | `--fields text,tool_use,tool_result,thinking` | Which content to search within (default: text,tool_use,tool_result). |
 | `--sort recent\|oldest\|hits` | Session ordering. |
 | `--include-sidechains` | Include subagent content. |
+| `--before-last-compact` | Only match against messages before each session's most recent `/compact`. |
 
 ### `ccthread info <id>`
 
@@ -257,7 +274,8 @@ Exit codes: `0` ok, `1` runtime error, `2` bad args, `3` session/project not fou
 Anywhere `<id>` is accepted you can pass:
 
 - A full UUID (`2F0A28FA-23B0-41ED-BF9C-2E13144B9BED`)
-- A hex prefix of 6+ characters (`2F0A28FA`). Disambiguated across all projects.
+- A hex prefix of 6+ characters (`2F0A28FA`). 8+ is recommended to avoid
+  ambiguous matches when you search across all projects.
 - A file path (absolute, `./relative`, or `~`-rooted).
 - `last` or `latest` for the most recently modified session anywhere.
 - `current` — the session that invoked ccthread. Detected in order: `CCTHREAD_SESSION_ID` env var → `--session-id` / `--resume` in an ancestor `claude` process's argv → a PID-keyed file written by the plugin's SessionStart hook. If none of those work, you'll get a clear error listing your options.

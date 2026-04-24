@@ -219,7 +219,7 @@ const main = defineCommand({
   meta: {
     name: "ccthread",
     version: VERSION,
-    description: "Read, search, and summarize Claude Code conversation logs from ~/.claude/projects/.\n\nExamples:\n  ccthread projects                         # list projects\n  ccthread list --project great-work        # list recent sessions\n  ccthread find \"rate limit\"                # which old thread mentioned it?\n  ccthread show <id> --page 2               # paginate through a long session\n  ccthread search \"port 3000\" --window 2    # grep with context\n  ccthread info <id>                        # session metadata + token usage\n  ccthread tools <id>                       # tool-call breakdown\n  ccthread stats --since 2026-04-01         # aggregate totals",
+    description: "Read, search, and summarize Claude Code conversation logs from ~/.claude/projects/.\n\nExamples:\n  ccthread projects                         # list projects\n  ccthread list --project great-work        # list recent sessions\n  ccthread find \"rate limit\"                # which old thread mentioned it?\n  ccthread show <id> --page 2               # paginate through a long session\n  ccthread search \"port 3000\" --window 2    # grep with context\n  ccthread info <id>                        # session metadata + token usage\n  ccthread tools <id>                       # tool-call breakdown\n  ccthread stats --since 2026-04-01         # aggregate totals\n  ccthread --version                        # print version and exit",
   },
   args: {
     strict: { type: "boolean", default: false, description: "Fail fast on malformed JSON lines (default: warn + continue)." },
