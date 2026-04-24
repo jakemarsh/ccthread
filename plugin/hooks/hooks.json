@@ -5,11 +5,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.sh\""
+            "shell": "bash",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.sh\""
           },
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.ps1\""
+            "shell": "powershell",
+            "command": "& \"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.ps1\""
           }
         ]
       }
@@ -19,11 +21,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.sh\""
+            "shell": "bash",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.sh\""
           },
           {
             "type": "command",
-            "command": "powershell.exe -NoProfile -File \"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.ps1\""
+            "shell": "powershell",
+            "command": "& \"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.ps1\""
           }
         ]
       }

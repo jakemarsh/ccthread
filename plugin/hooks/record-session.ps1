@@ -5,6 +5,10 @@
 
 $ErrorActionPreference = "Stop"
 
+# Skip on non-Windows (PowerShell Core 6+ runs on macOS/Linux too). The
+# POSIX sibling handles those platforms.
+if ($PSVersionTable.Platform -and $PSVersionTable.Platform -ne 'Win32NT') { exit 0 }
+
 $payload = [Console]::In.ReadToEnd()
 try { $data = $payload | ConvertFrom-Json } catch { exit 0 }
 

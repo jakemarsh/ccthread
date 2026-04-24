@@ -388,3 +388,21 @@ describe("regressions (cli)", () => {
     expect(r.stderr).toContain("Invalid regular expression");
   });
 });
+
+describe("plugin manifest — platform-gated hooks", () => {
+  // Caught once where hooks.json registered sh AND powershell for every
+  // platform, which meant every session start logged a hook-failure notice
+  // on whichever platform lacked the sibling shell.
+  test("hooks.json gates each command by shell field", async () => {
+    const path = join(import.meta.dir, "..", "plugin", "hooks", "hooks.json");
+    const doc = JSON.parse(await Bun.file(path).text());
+    for (const event of ["SessionStart", "SessionEnd"]) {
+      const hooks = doc.hooks[event][0].hooks as Array<{ shell: string; command: string }>;
+      const shells = hooks.map(h => h.shell).sort();
+      expect(shells).toEqual(["bash", "powershell"]);
+      for (const h of hooks) {
+        expect(h.command).toContain("${CLAUDE_PLUGIN_ROOT}");
+      }
+    }
+  });
+});
