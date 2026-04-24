@@ -1,8 +1,13 @@
 import { listAllSessions, encodeProjectPath, resolveSession } from "../paths.ts";
 import { streamJsonl } from "../parser/stream.ts";
 import { renderLine, fmtTime } from "../format/markdown.ts";
+import { truncateLines } from "../format/truncate.ts";
 import { contentBlocks, isAssistant, isUser, type LogLine } from "../parser/types.ts";
 import { parseDateArg } from "../util/dates.ts";
+
+// How many lines of each context message we render around a match. A
+// single tool_result can be 500+ lines, which drowns the match signal.
+const SEARCH_CONTEXT_LINE_CAP = 20;
 
 export interface SearchOptions {
   project?: string;
@@ -182,7 +187,10 @@ async function scanSession(
     const hi = Math.min(entries.length, i + window + 1);
     const win: string[] = [];
     for (let k = lo; k < hi; k++) {
-      if (entries[k]!.rendered) win.push(entries[k]!.rendered!);
+      const rendered = entries[k]!.rendered;
+      if (!rendered) continue;
+      const { body, hiddenLines } = truncateLines(rendered, SEARCH_CONTEXT_LINE_CAP);
+      win.push(hiddenLines > 0 ? `${body}\n\n_… +${hiddenLines} line${hiddenLines === 1 ? "" : "s"} truncated in search context._` : body);
     }
     hits.push({
       sessionShort: shortId,

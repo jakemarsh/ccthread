@@ -464,6 +464,34 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("search — context truncation", () => {
+  // Was: ccthread search window context emitted each context message in
+  // full, so a tool_result with 500 lines drowned the match itself.
+  test("truncates each context message to a line cap", async () => {
+    const project = join(TMP, "-proj-search-truncate");
+    const { mkdirSync: mkd } = await import("node:fs");
+    mkd(project, { recursive: true });
+    const sessionId = "11111111-1111-1111-1111-111111111111";
+
+    // Build a message with 500 repeated lines of content plus a match marker.
+    const big = Array.from({ length: 500 }, (_, i) => `line ${i}`).join("\n");
+    const lines = [
+      JSON.stringify({ type: "user", uuid: "a", timestamp: "2026-04-01T00:00:00Z",
+        message: { role: "user", content: [{ type: "text", text: big }] } }),
+      JSON.stringify({ type: "user", uuid: "b", timestamp: "2026-04-01T00:00:01Z",
+        message: { role: "user", content: [{ type: "text", text: "NEEDLE_STRING" }] } }),
+    ];
+    writeFileSync(join(project, `${sessionId}.jsonl`), lines.join("\n") + "\n");
+
+    const { runSearch } = await import("../src/commands/search.ts");
+    const out = await runSearch("NEEDLE_STRING", { window: 2, plain: true });
+    expect(out).toContain("NEEDLE_STRING");
+    expect(out).toContain("truncated in search context");
+    // Raw count: the 500-line message should have been compressed.
+    expect(out.split("\n").length).toBeLessThan(100);
+  });
+});
+
 describe("version sync", () => {
   // Caught once when package.json bumped but .ccthread-version didn't —
   // the dispatcher then fetched a tarball URL that didn't exist. Check
