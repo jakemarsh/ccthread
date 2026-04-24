@@ -17,7 +17,7 @@ set "BIN=%BINDIR%\ccthread.exe"
 if not exist "%BIN%" (
   set "URL=https://github.com/jakemarsh/ccthread/releases/download/v%VERSION%/ccthread-v%VERSION%-%TARGET%.tar.gz"
   if not exist "%BINDIR%" mkdir "%BINDIR%"
-  powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $url='%URL%'; $tmp=[IO.Path]::GetTempFileName(); Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp; tar -xzf $tmp -C '%BINDIR%'; Remove-Item $tmp" || (
+  powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $url='%URL%'; $tmp=[IO.Path]::GetTempFileName(); Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $tmp; $sha=[IO.Path]::GetTempFileName(); $ok=$false; try { Invoke-WebRequest -UseBasicParsing -Uri ($url+'.sha256') -OutFile $sha -ErrorAction Stop; $ok=$true } catch {}; if ($ok) { $exp=(Get-Content $sha -Raw).Trim().Split()[0].ToLower(); $act=(Get-FileHash -Algorithm SHA256 -Path $tmp).Hash.ToLower(); if ($exp -ne $act) { throw ('ccthread: SHA256 mismatch for ' + $url) } }; Remove-Item $sha -ErrorAction SilentlyContinue; tar -xzf $tmp -C '%BINDIR%'; Remove-Item $tmp" || (
     echo ccthread: could not download %URL% 1>&2
     echo Install manually: https://github.com/jakemarsh/ccthread/releases 1>&2
     exit /b 1

@@ -18,6 +18,24 @@ $Tgz = Join-Path $Tmp "ccthread.tar.gz"
 
 Write-Host "Downloading ccthread v$Version ($arch)..."
 Invoke-WebRequest -UseBasicParsing -Uri $Url -OutFile $Tgz
+
+# Verify SHA256 if a sibling .sha256 exists at the release. Mirrors install.sh.
+$ShaFile = Join-Path $Tmp "ccthread.tar.gz.sha256"
+$ShaAvailable = $false
+try {
+  Invoke-WebRequest -UseBasicParsing -Uri "$Url.sha256" -OutFile $ShaFile -ErrorAction Stop
+  $ShaAvailable = $true
+} catch {
+  # No .sha256 sibling at the release — skip verification.
+}
+if ($ShaAvailable) {
+  $Expected = (Get-Content $ShaFile -Raw).Trim().Split()[0].ToLower()
+  $Actual = (Get-FileHash -Algorithm SHA256 -Path $Tgz).Hash.ToLower()
+  if ($Expected -ne $Actual) {
+    throw "ccthread: SHA256 mismatch for $Url`n  expected: $Expected`n  got:      $Actual"
+  }
+}
+
 tar -xzf $Tgz -C $Tmp
 
 $Dest = Join-Path $env:LOCALAPPDATA "Programs\ccthread"
