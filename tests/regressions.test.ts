@@ -445,6 +445,18 @@ describe("stream parser — edge cases", () => {
   });
 });
 
+describe("version sync", () => {
+  // Caught once when package.json bumped but .ccthread-version didn't —
+  // the dispatcher then fetched a tarball URL that didn't exist. Check
+  // that all three version-carrying files agree.
+  test("package.json, plugin.json, .ccthread-version match", async () => {
+    const { readVersions, findMismatches } = await import("../scripts/check-versions.ts");
+    const versions = await readVersions();
+    const err = findMismatches(versions);
+    expect(err).toBeNull();
+  });
+});
+
 describe("cleanup-session hook — payload-driven delete", () => {
   // Guard: shell scripts only run on POSIX. Skip on Windows.
   const skipOnWindows = process.platform === "win32";
