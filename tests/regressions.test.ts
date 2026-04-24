@@ -559,6 +559,32 @@ describe("version sync", () => {
   });
 });
 
+describe("current-session — tier resolution", () => {
+  // Tier 1: CCTHREAD_SESSION_ID env var override. This is the easiest
+  // tier to test deterministically; tiers 2 (argv walk) and 3 (hook
+  // file lookup keyed by a real claude ancestor's pid) require a live
+  // claude process in the ancestor chain and are exercised end-to-end
+  // via the release workflow's smoke step against a real session.
+  test("CCTHREAD_SESSION_ID env var resolves to the matching session file", async () => {
+    const sessionId = "ABCDEF01-2345-6789-ABCD-EF0123456789";
+    const project = join(TMP, "-proj-current-tier1");
+    const { mkdirSync: mkd } = await import("node:fs");
+    mkd(project, { recursive: true });
+    writeFileSync(join(project, `${sessionId}.jsonl`),
+      JSON.stringify({ type: "user", message: { content: "hi" } }) + "\n");
+
+    const prev = process.env.CCTHREAD_SESSION_ID;
+    process.env.CCTHREAD_SESSION_ID = sessionId;
+    try {
+      const ref = await resolveSession("current");
+      expect(ref.sessionId.toLowerCase()).toBe(sessionId.toLowerCase());
+    } finally {
+      if (prev === undefined) delete process.env.CCTHREAD_SESSION_ID;
+      else process.env.CCTHREAD_SESSION_ID = prev;
+    }
+  });
+});
+
 describe("current-session — transcript path sandbox", () => {
   // Bug-shape: `ccthread show current` trusted hook-written transcript_path
   // without checking it was under projectsDir. A stale or tampered path
