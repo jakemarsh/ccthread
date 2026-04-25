@@ -4,15 +4,9 @@
 # ccthread CLI can look up the "current" session even when the host
 # claude process wasn't invoked with --session-id in argv.
 #
+# Runs on POSIX natively and on Windows under Git Bash / MSYS / Cygwin.
 # PPID here is the claude process that spawned this hook.
 set -e
-
-# Skip on Windows-like shells (Git Bash, MSYS, Cygwin). The PowerShell
-# hook handles those; running here too would double-write session files
-# under different PIDs.
-case "$(uname -s 2>/dev/null)" in
-  MINGW*|MSYS*|CYGWIN*|Windows*) exit 0 ;;
-esac
 
 input=$(cat)
 

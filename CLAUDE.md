@@ -144,7 +144,7 @@ Avoid cheating tests to make them pass (weakening assertions, adding skipped cas
 
 1. **`CCTHREAD_SESSION_ID`** env var (explicit override; used by tests and scripting).
 2. **Parent-process argv walk.** Walks `ppid` via `ps -ww -o ppid=,command= -p <pid>` (POSIX) or `Get-CimInstance Win32_Process` (Windows) looking for a `claude` ancestor with `--session-id <uuid>` or `--resume <uuid>`. Covers Stovetop and any explicit-id launch.
-3. **Hook-written file.** The plugin ships a `SessionStart` hook that writes `{session_id,transcript_path,cwd,pid,started_at}` to `$CLAUDE_PLUGIN_DATA/sessions/<claude-pid>.json`. The walker also notes the `claude` ancestor's pid; tier 3 reads that pid's file. Covers bare `claude` when the plugin is installed. **POSIX-only** — the hook is a single bash script. Windows users still get tiers 1 and 2.
+3. **Hook-written file.** The plugin ships a `SessionStart` hook that writes `{session_id,transcript_path,cwd,pid,started_at}` to `$CLAUDE_PLUGIN_DATA/sessions/<claude-pid>.json`. The walker also notes the `claude` ancestor's pid; tier 3 reads that pid's file. Covers bare `claude` when the plugin is installed. The hook is a single bash script — works on POSIX natively and on Windows under Git Bash / MSYS / Cygwin. Windows users without bash on PATH fall back to tiers 1 and 2.
 
 If none of those yield a match, `resolveSession` throws `CurrentSessionUndetectableError` and the CLI exits 3 with a message listing every fallback.
 

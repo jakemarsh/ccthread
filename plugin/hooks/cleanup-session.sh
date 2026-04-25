@@ -6,11 +6,8 @@
 # the pid-based filename if the payload's missing a session_id. The
 # payload match keeps cleanup correct even in edge cases where $PPID
 # isn't what record-session.sh saw (pid reuse, etc.).
-
-# Skip on Windows-like shells; PowerShell sibling handles those.
-case "$(uname -s 2>/dev/null)" in
-  MINGW*|MSYS*|CYGWIN*|Windows*) exit 0 ;;
-esac
+#
+# Runs on POSIX natively and on Windows under Git Bash / MSYS / Cygwin.
 
 DATA="${CLAUDE_PLUGIN_DATA:-$HOME/.claude/plugins/data/ccthread}"
 SESSIONS="$DATA/sessions"
