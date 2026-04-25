@@ -675,20 +675,20 @@ describe("cleanup-session hook — payload-driven delete", () => {
   });
 });
 
-describe("plugin manifest — platform-gated hooks", () => {
-  // Caught once where hooks.json registered sh AND powershell for every
-  // platform, which meant every session start logged a hook-failure notice
-  // on whichever platform lacked the sibling shell.
-  test("hooks.json gates each command by shell field", async () => {
+describe("plugin manifest — single bash hook", () => {
+  // We tried registering both a bash and a powershell hook for cross-
+  // platform coverage. Turns out `shell: "powershell"` requires PowerShell
+  // to be present — Claude Code doesn't auto-skip when the shell binary
+  // is missing. macOS users without PowerShell were getting a hook-error
+  // notice on every session start. The honest fix is one bash hook.
+  test("hooks.json registers exactly one bash command per event", async () => {
     const path = join(import.meta.dir, "..", "plugin", "hooks", "hooks.json");
     const doc = JSON.parse(await Bun.file(path).text());
     for (const event of ["SessionStart", "SessionEnd"]) {
       const hooks = doc.hooks[event][0].hooks as Array<{ shell: string; command: string }>;
-      const shells = hooks.map(h => h.shell).sort();
-      expect(shells).toEqual(["bash", "powershell"]);
-      for (const h of hooks) {
-        expect(h.command).toContain("${CLAUDE_PLUGIN_ROOT}");
-      }
+      expect(hooks.length).toBe(1);
+      expect(hooks[0]!.shell).toBe("bash");
+      expect(hooks[0]!.command).toContain("${CLAUDE_PLUGIN_ROOT}");
     }
   });
 });

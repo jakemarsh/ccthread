@@ -7,11 +7,6 @@
             "type": "command",
             "shell": "bash",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.sh\""
-          },
-          {
-            "type": "command",
-            "shell": "powershell",
-            "command": "& \"${CLAUDE_PLUGIN_ROOT}/hooks/record-session.ps1\""
           }
         ]
       }
@@ -23,11 +18,6 @@
             "type": "command",
             "shell": "bash",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.sh\""
-          },
-          {
-            "type": "command",
-            "shell": "powershell",
-            "command": "& \"${CLAUDE_PLUGIN_ROOT}/hooks/cleanup-session.ps1\""
           }
         ]
       }
